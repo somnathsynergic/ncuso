@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/img/logo.png" />
+    <title>Admin Login | NCUSO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/admin/assets/admin.css" />
+  </head>
+  <body class="login-body">
+    <form class="login-card" id="login" novalidate>
+      <div class="login-head">
+        <img src="/img/logo.png" alt="NCUSO emblem" class="login-logo" />
+        <div class="login-org">NCUSO</div>
+        <div class="login-org-name">National Council for Unaided School Organization</div>
+      </div>
+
+      <div class="login-fields">
+      <h1>Admin Login</h1>
+      <p class="sub">Sign in to view school registrations</p>
+
+      <label for="username">Admin ID</label>
+      <input class="input" id="username" name="username" autocomplete="username" autofocus required />
+
+      <label for="password">Password</label>
+      <input class="input" id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <p class="error" id="error" role="alert"></p>
+      <button class="btn primary" id="submit" type="submit">Sign In</button>
+      <img src="/img/tagline-sm.png" alt="শিক্ষার স্বার্থে ঐক্যবদ্ধ" class="login-tag" />
+      </div>
+    </form>
+
+    <script type="module">
+      // Route guard: if the browser restores this page from history (Back button) while a session
+      // is active, bounce straight to the dashboard instead of showing the login form.
+      const guard = () => fetch('/api/admin/session', { cache: 'no-store' })
+        .then((r) => r.ok && location.replace('/admin'))
+        .catch(() => {});
+      window.addEventListener('pageshow', guard);
+
+      const form = document.getElementById('login');
+      const err = document.getElementById('error');
+      const btn = document.getElementById('submit');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        err.textContent = '';
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: form.username.value.trim(), password: form.password.value }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Login failed');
+          location.replace('/admin');
+        } catch (ex) {
+          err.textContent = ex.message;
+          btn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

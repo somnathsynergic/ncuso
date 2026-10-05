@@ -1,0 +1,149 @@
+import mysql from 'mysql2/promise';
+
+export const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 5,
+  connectTimeout: 10000,
+});
+
+// Inserts one form submission into td_school_reg and returns the new reg_id.
+// `v` is already validated; district is given by name and resolved to md_districts.sl_no.
+export async function insertSchoolReg(v, districtId) {
+  const [result] = await pool.execute(
+    `INSERT INTO td_school_reg (
+       school_name, udise_no, mobile_no, year_of_establishment, district_id, circle_name,
+       previously_applied_noc, school_type,
+       total_students, total_boys, total_girls, total_teachers, untrained_teachers, avg_teacher_salary,
+       total_classrooms, classrooms_below_400sqft, sanctioned_building_plan, needs_lease, lease_20_years_possible,
+       non_compliances
+     ) VALUES (?,?,?,?,?,?, ?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?)`,
+    [
+      v.schoolName.trim(), v.udiseNo.trim(), v.mobile.trim(), Number(v.yearEstablished), districtId, v.circle.trim(),
+      v.previouslyAppliedNoc, v.schoolType,
+      Number(v.totalStudents), Number(v.totalBoys), Number(v.totalGirls), Number(v.totalTeachers),
+      Number(v.untrainedTeachers), Number(v.avgSalary),
+      Number(v.totalClassrooms), Number(v.classroomsBelow400), v.sanctionedPlan, v.needsLease, v.lease20Possible,
+      JSON.stringify(v.nonCompliances),
+    ],
+  );
+  return result.insertId;
+}
+
+export async function getDistricts() {
+  const [rows] = await pool.query('SELECT sl_no AS id, district_name AS name FROM md_districts ORDER BY district_name');
+  return rows;
+}
+
+// ---------- Admin queries ----------
+
+// Whitelist: UI sort key -> SQL expression (never interpolate user input directly)
+const SORT_COLUMNS = {
+  id: 'r.reg_id',
+  school: 'r.school_name',
+  udise: 'r.udise_no',
+  district: 'd.district_name',
+  type: 'r.school_type',
+  students: 'r.total_students',
+  teachers: 'r.total_teachers',
+  status: 'r.approve_flag',
+  submitted: 'r.created_at',
+};
+
+export async function listRegistrations({ search = '', districtId = null, sort = 'submitted', dir = 'desc', page = 1, pageSize = 10 }) {
+  const where = [];
+  const params = [];
+  if (search) {
+    const like = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+    where.push('(r.school_name LIKE ? OR r.udise_no LIKE ? OR r.mobile_no LIKE ? OR r.circle_name LIKE ?)');
+    params.push(like, like, like, like);
+  }
+  if (districtId) {
+    where.push('r.district_id = ?');
+    params.push(districtId);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const orderCol = SORT_COLUMNS[sort] || SORT_COLUMNS.submitted;
+  const orderDir = dir === 'asc' ? 'ASC' : 'DESC';
+  const from = 'FROM td_school_reg r JOIN md_districts d ON d.sl_no = r.district_id';
+
+  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total ${from} ${whereSql}`, params);
+  const [rows] = await pool.query(
+    `SELECT r.reg_id AS id, r.school_name AS school, r.udise_no AS udise, d.district_name AS district,
+            r.school_type AS type, r.total_students AS students, r.total_teachers AS teachers, r.approve_flag AS status, r.created_at AS submitted
+     ${from} ${whereSql}
+     ORDER BY ${orderCol} ${orderDir}, r.reg_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, (page - 1) * pageSize],
+  );
+  const [[{ maxId }]] = await pool.query('SELECT MAX(reg_id) AS maxId FROM td_school_reg'); // newest id overall, ignoring filters
+  return { total, rows, maxId: maxId ?? 0 };
+}
+
+// Returns one registration keyed by the same field names the form uses,
+// so the admin popup can reuse the form config for labels.
+export async function getRegistration(id) {
+  const [rows] = await pool.query(
+    `SELECT r.*, d.district_name FROM td_school_reg r JOIN md_districts d ON d.sl_no = r.district_id WHERE r.reg_id = ?`,
+    [id],
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.reg_id,
+    submittedAt: r.created_at,
+    status: r.approve_flag,
+    approvedAt: r.approved_at ?? null,
+    approvedBy: r.approved_by ?? null,
+    rejectedAt: r.rejected_at ?? null,
+    rejectedBy: r.rejected_by ?? null,
+    values: {
+      schoolName: r.school_name, udiseNo: r.udise_no, mobile: r.mobile_no, yearEstablished: r.year_of_establishment,
+      district: r.district_name, circle: r.circle_name,
+      previouslyAppliedNoc: r.previously_applied_noc, schoolType: r.school_type,
+      totalStudents: r.total_students, totalBoys: r.total_boys, totalGirls: r.total_girls,
+      totalTeachers: r.total_teachers, untrainedTeachers: r.untrained_teachers, avgSalary: Number(r.avg_teacher_salary),
+      totalClassrooms: r.total_classrooms, classroomsBelow400: r.classrooms_below_400sqft,
+      sanctionedPlan: r.sanctioned_building_plan, needsLease: r.needs_lease, lease20Possible: r.lease_20_years_possible,
+      nonCompliances: typeof r.non_compliances === 'string' ? JSON.parse(r.non_compliances) : r.non_compliances,
+    },
+  };
+}
+
+// Decides a registration: only a Pending (P) row can become Approved (A) or Rejected (R); the decision is final.
+// The check is part of the UPDATE itself so two concurrent clicks cannot both succeed.
+// The decision time (DB server time) and admin id are recorded in the same statement
+// (approved_at/approved_by or rejected_at/rejected_by). If those audit columns have not been added to the
+// table yet, the status change still goes through without them.
+// Returns { result: 'ok' | 'not_found' | 'already_decided', status? }.
+export async function setApprovalStatus(id, status, adminId) {
+  const audit = status === 'A'
+    ? ", approved_at = NOW(), approved_by = ?"
+    : ", rejected_at = NOW(), rejected_by = ?";
+  const where = " WHERE reg_id = ? AND approve_flag = 'P'";
+  let result;
+  try {
+    [result] = await pool.query(`UPDATE td_school_reg SET approve_flag = ?${audit}${where}`, [status, adminId, id]);
+  } catch (e) {
+    if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
+    console.warn(`Audit columns missing (${e.sqlMessage}); updating status only. Run the db/*.sql migrations.`);
+    [result] = await pool.query(`UPDATE td_school_reg SET approve_flag = ?${where}`, [status, id]);
+  }
+  if (result.affectedRows > 0) return { result: 'ok' };
+  const [rows] = await pool.query('SELECT approve_flag FROM td_school_reg WHERE reg_id = ?', [id]);
+  return rows.length ? { result: 'already_decided', status: rows[0].approve_flag } : { result: 'not_found' };
+}
+
+// ---------- Admin users (md_user) ----------
+
+// Returns { userId, name, passwordHash } for an exact user_id match, or null.
+// MySQL's default collation is case-insensitive, so the exact match is re-checked in JS.
+export async function findUser(userId) {
+  const [rows] = await pool.query(
+    'SELECT user_id, user_name, user_password FROM md_user WHERE user_id = ? LIMIT 5', [userId]);
+  const row = rows.find((r) => r.user_id === userId);
+  return row ? { userId: row.user_id, name: row.user_name, passwordHash: row.user_password } : null;
+}

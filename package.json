@@ -1,0 +1,15 @@
+{
+  "name": "unaided-school-portal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "dev": "node --env-file=.env --watch server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^4.21.0",
+    "mysql2": "^3.24.5"
+  }
+}
