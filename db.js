@@ -15,14 +15,14 @@ export const pool = mysql.createPool({
 export async function insertSchoolReg(v, districtId) {
   const [result] = await pool.execute(
     `INSERT INTO td_school_reg (
-       school_name, udise_no, mobile_no, year_of_establishment, district_id, circle_name,
+       school_name, udise_no, mobile_no, email_id, year_of_establishment, district_id, circle_name,
        previously_applied_noc, school_type,
        total_students, total_boys, total_girls, total_teachers, untrained_teachers, avg_teacher_salary,
        total_classrooms, classrooms_below_400sqft, sanctioned_building_plan, needs_lease, lease_20_years_possible,
        non_compliances
-     ) VALUES (?,?,?,?,?,?, ?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?)`,
+     ) VALUES (?,?,?,?,?,?,?, ?,?, ?,?,?,?,?,?, ?,?,?,?,?, ?)`,
     [
-      v.schoolName.trim(), v.udiseNo.trim(), v.mobile.trim(), Number(v.yearEstablished), districtId, v.circle.trim(),
+      v.schoolName.trim(), v.udiseNo.trim(), v.mobile.trim(), v.email.trim().toLowerCase(), Number(v.yearEstablished), districtId, v.circle.trim(),
       v.previouslyAppliedNoc, v.schoolType,
       Number(v.totalStudents), Number(v.totalBoys), Number(v.totalGirls), Number(v.totalTeachers),
       Number(v.untrainedTeachers), Number(v.avgSalary),
@@ -101,7 +101,7 @@ export async function getRegistration(id) {
     rejectedAt: r.rejected_at ?? null,
     rejectedBy: r.rejected_by ?? null,
     values: {
-      schoolName: r.school_name, udiseNo: r.udise_no, mobile: r.mobile_no, yearEstablished: r.year_of_establishment,
+      schoolName: r.school_name, udiseNo: r.udise_no, mobile: r.mobile_no, email: r.email_id, yearEstablished: r.year_of_establishment,
       district: r.district_name, circle: r.circle_name,
       previouslyAppliedNoc: r.previously_applied_noc, schoolType: r.school_type,
       totalStudents: r.total_students, totalBoys: r.total_boys, totalGirls: r.total_girls,

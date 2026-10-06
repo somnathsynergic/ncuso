@@ -21,6 +21,10 @@ export const steps = [
         pattern: /^[6-9]\d{9}$/, patternMessage: 'Enter a valid 10-digit mobile number',
       },
       {
+        name: 'email', label: 'Email ID', type: 'email', inputMode: 'email', maxLength: 50, placeholder: 'name@example.com',
+        pattern: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, patternMessage: 'Enter a valid email address',
+      },
+      {
         name: 'yearEstablished', label: 'Year of Establishment', type: 'year', min: 1800, max: new Date().getFullYear(),
         placeholder: 'Select year',
       },

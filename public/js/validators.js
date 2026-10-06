@@ -5,6 +5,7 @@ const isEmpty = (v) => v === undefined || v === null || (Array.isArray(v) ? v.le
 export function validateField(field, value) {
   if (isEmpty(value)) return field.type === 'checkbox' ? 'Select at least one option' : 'This field is required';
   if (field.pattern && !field.pattern.test(String(value).trim())) return field.patternMessage;
+  if (field.maxLength && String(value).trim().length > field.maxLength) return `Must be ${field.maxLength} characters or fewer`;
   if (field.type === 'number' || field.type === 'year') {
     const n = Number(value);
     if (!Number.isFinite(n) || (field.type === 'year' && !/^\d{4}$/.test(String(value).trim()))) {

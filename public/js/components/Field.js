@@ -13,7 +13,8 @@ function TextInput(field, value, onChange) {
   const input = h('input', {
     class: 'input', id: field.name, name: field.name, type: field.type, value: value ?? '',
     placeholder: field.placeholder || '', inputMode: field.inputMode, maxLength: field.maxLength,
-    min: field.min, max: field.max, autocomplete: 'off',
+    min: field.min, max: field.max, autocomplete: field.type === 'email' ? 'email' : 'off',
+    autocapitalize: field.type === 'email' ? 'none' : null, spellcheck: field.type === 'email' ? false : null,
     onInput: (e) => {
       if (field.inputMode === 'numeric') e.target.value = e.target.value.replace(/\D/g, '');
       onChange(e.target.value);
