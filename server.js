@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'node:path';
+import 'dotenv/config'
 import { fileURLToPath } from 'node:url';
 import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus } from './db.js';
 import { authenticate, startSession, endSession, isAuthed, requireAdmin, loginBlocked, recordFail, clearFails } from './auth.js';
