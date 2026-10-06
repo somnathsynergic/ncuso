@@ -54,7 +54,7 @@ export const steps = [
       { name: 'totalTeachers', label: 'Total No. of Teachers Available', type: 'number', min: 0 },
       { name: 'untrainedTeachers', label: 'No. of Untrained Teachers', type: 'number', min: 0 },
       {
-        name: 'avgSalary', label: 'Average Teacher Salary / Gross Pay P.M. (in Rs.)', type: 'number', min: 0, max: 99999999, prefix: '₹',
+        name: 'avgSalary', label: 'Avg. Teacher Salary / Gross Pay P.M. (in Rs.)', type: 'number', min: 0, max: 99999999, prefix: '₹',
       },
     ],
     // Cross-field rules: return { fieldName: message } for any problems

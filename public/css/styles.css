@@ -148,7 +148,7 @@ select.input { appearance: none; cursor: pointer; padding-right: 38px;
 .banner.error { background: #fdecea; color: var(--danger); padding: 10px 14px; border-radius: 10px; margin: 12px 0 0; }
 
 /* ---------- Done ---------- */
-.done { text-align: center; padding: 48px 28px; }
+.done { text-align: center; /*padding: 48px 28px;*/ }
 .tick { width: 80px; height: 80px; margin: 0 auto 16px; border-radius: 50%; background: var(--green); color: #fff; font-size: 2.4rem; display: grid; place-items: center; animation: pop 0.4s ease; }
 @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
 
