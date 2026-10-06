@@ -189,13 +189,14 @@ async function openDetail(id) {
         },
       }, label);
       foot.hidden = false;
-      foot.replaceChildren(
+      foot.replaceChildren(...[
         h('div', { class: 'foot-status' }, h('span', { class: 'muted' }, 'Status'), StatusBadge(current),
           current !== 'P' && decision.at && h('span', { class: 'muted' },
             `${splitDecisionBy(decision.by).who ? `by ${splitDecisionBy(decision.by).who} · ` : ''}${fmtDate(decision.at)}`)),
         h('div', { class: 'foot-actions' }, btn('Approve', 'A', 'approve'), btn('Reject', 'R', 'reject')),
         current === 'R' && splitDecisionBy(decision.by).note && h('div', { class: 'foot-note' },
-          h('strong', {}, 'Rejection note: '), splitDecisionBy(decision.by).note));
+          h('strong', {}, 'Rejection note: '), splitDecisionBy(decision.by).note),
+      ].filter(Boolean));
     };
     paintFoot();
     body.replaceChildren(...steps.map((s) =>
@@ -205,6 +206,7 @@ async function openDetail(id) {
           const v = reg.values[f.name];
           const shown = Array.isArray(v)
             ? (v.length ? h('ul', { class: 'chips' }, v.map((x) => h('li', {}, x))) : '—')
+            : v === null || v === undefined || v === '' ? '—'
             : f.prefix ? `${f.prefix} ${Number(v).toLocaleString('en-IN')}` : v;
           return [h('dt', {}, f.label), h('dd', {}, shown)];
         })))));

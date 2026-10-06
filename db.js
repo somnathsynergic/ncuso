@@ -68,11 +68,11 @@ export async function listRegistrations({ search = '', districtId = null, sort =
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const orderCol = SORT_COLUMNS[sort] || SORT_COLUMNS.submitted;
   const orderDir = dir === 'asc' ? 'ASC' : 'DESC';
-  const from = 'FROM td_school_reg r JOIN md_districts d ON d.sl_no = r.district_id';
+  const from = 'FROM td_school_reg r LEFT JOIN md_districts d ON d.sl_no = r.district_id';
 
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total ${from} ${whereSql}`, params);
   const [rows] = await pool.query(
-    `SELECT r.reg_id AS id, r.school_name AS school, r.udise_no AS udise, d.district_name AS district,
+    `SELECT r.reg_id AS id, r.school_name AS school, r.udise_no AS udise, COALESCE(d.district_name, 'Not specified') AS district,
             r.school_type AS type, r.total_students AS students, r.total_teachers AS teachers, r.approve_flag AS status, r.created_at AS submitted
      ${from} ${whereSql}
      ORDER BY ${orderCol} ${orderDir}, r.reg_id DESC
@@ -87,7 +87,7 @@ export async function listRegistrations({ search = '', districtId = null, sort =
 // so the admin popup can reuse the form config for labels.
 export async function getRegistration(id) {
   const [rows] = await pool.query(
-    `SELECT r.*, d.district_name FROM td_school_reg r JOIN md_districts d ON d.sl_no = r.district_id WHERE r.reg_id = ?`,
+    `SELECT r.*, COALESCE(d.district_name, 'Not specified') AS district_name FROM td_school_reg r LEFT JOIN md_districts d ON d.sl_no = r.district_id WHERE r.reg_id = ?`,
     [id],
   );
   const r = rows[0];
