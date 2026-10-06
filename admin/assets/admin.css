@@ -162,3 +162,19 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
   .vtable tr.row.blink > td { animation: row-fade 1.8s ease-out 1; animation-delay: var(--blink-delay, 0ms); }
   @keyframes row-fade { from { background-color: #ffe97a; } to { background-color: transparent; } }
 }
+
+/* confirmation dialog (approve / reject) sits above the details popup */
+.overlay-top { z-index: 40; }
+.btn.success { background: var(--green); color: #fff; box-shadow: 0 6px 16px rgba(46, 125, 50, .3); }
+.btn.success:hover:not(:disabled) { background: #1b5e20; }
+.modal.confirm.is-approve { border-top-color: var(--green); }
+.confirm-body strong { color: var(--text); }
+.note-field { margin-top: 16px; text-align: left; }
+.note-field label { display: block; font-size: .85rem; font-weight: 500; margin-bottom: 6px; }
+.note-input { resize: vertical; min-height: 96px; font-size: 16px; }
+.note-input.invalid { border-color: var(--danger); background: #fff6f6; }
+.note-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.note-error { margin: 0; min-height: 1.2em; font-size: .8rem; }
+.note-count { font-size: .75rem; white-space: nowrap; }
+.foot-note { flex: 0 0 100%; padding-top: 8px; border-top: 1px dashed var(--line); font-size: .85rem; color: var(--text); word-break: break-word; }
+.foot-note strong { color: var(--danger); }

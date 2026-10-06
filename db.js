@@ -119,14 +119,14 @@ export async function getRegistration(id) {
 // (approved_at/approved_by or rejected_at/rejected_by). If those audit columns have not been added to the
 // table yet, the status change still goes through without them.
 // Returns { result: 'ok' | 'not_found' | 'already_decided', status? }.
-export async function setApprovalStatus(id, status, adminId) {
+export async function setApprovalStatus(id, status, actor) {
   const audit = status === 'A'
     ? ", approved_at = NOW(), approved_by = ?"
     : ", rejected_at = NOW(), rejected_by = ?";
   const where = " WHERE reg_id = ? AND approve_flag = 'P'";
   let result;
   try {
-    [result] = await pool.query(`UPDATE td_school_reg SET approve_flag = ?${audit}${where}`, [status, adminId, id]);
+    [result] = await pool.query(`UPDATE td_school_reg SET approve_flag = ?${audit}${where}`, [status, actor, id]);
   } catch (e) {
     if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
     console.warn(`Audit columns missing (${e.sqlMessage}); updating status only. Run the db/*.sql migrations.`);

@@ -145,6 +145,13 @@ function reset(patch) {
   load();
 }
 
+// rejected_by holds "<admin id> - <note>"; approved_by is just the admin id
+function splitDecisionBy(by) {
+  const s = String(by ?? '');
+  const i = s.indexOf(' - ');
+  return i < 0 ? { who: s, note: '' } : { who: s.slice(0, i), note: s.slice(i + 3) };
+}
+
 // ---------- Detail popup ----------
 async function openDetail(id) {
   const body = h('div', { class: 'modal-body' }, h('p', { class: 'muted' }, 'Loading…'));
@@ -171,8 +178,10 @@ async function openDetail(id) {
       const btn = (label, code, cls) => h('button', {
         type: 'button', class: `act big ${cls}`, disabled: busy || current !== 'P',
         onClick: async () => {
+          const answer = await confirmDecision(code, reg.values.schoolName);
+          if (!answer) return;
           paintFoot(true);
-          const next = await updateStatus(reg.id, code);
+          const next = await updateStatus(reg.id, code, answer.note);
           if (next && next !== 'P') {
             try { decision = decisionOf(await api(`/api/admin/registrations/${reg.id}`)); } catch { /* footer just omits the details */ }
           }
@@ -184,8 +193,10 @@ async function openDetail(id) {
       foot.replaceChildren(
         h('div', { class: 'foot-status' }, h('span', { class: 'muted' }, 'Status'), StatusBadge(current),
           current !== 'P' && decision.at && h('span', { class: 'muted' },
-            `${decision.by ? `by ${decision.by} · ` : ''}${fmtDate(decision.at)}`)),
-        h('div', { class: 'foot-actions' }, btn('Approve', 'A', 'approve'), btn('Reject', 'R', 'reject')));
+            `${splitDecisionBy(decision.by).who ? `by ${splitDecisionBy(decision.by).who} · ` : ''}${fmtDate(decision.at)}`)),
+        h('div', { class: 'foot-actions' }, btn('Approve', 'A', 'approve'), btn('Reject', 'R', 'reject')),
+        current === 'R' && splitDecisionBy(decision.by).note && h('div', { class: 'foot-note' },
+          h('strong', {}, 'Rejection note: '), splitDecisionBy(decision.by).note));
     };
     paintFoot();
     body.replaceChildren(...steps.map((s) =>
@@ -312,7 +323,7 @@ function ActionButtons(r) {
   const btn = (label, code, cls) => h('button', {
     type: 'button', class: `act ${cls}`, disabled: busy || r.status !== 'P',
     title: `${label} ${r.school}`, 'aria-label': `${label} ${r.school}`,
-    onClick: (e) => { e.stopPropagation(); updateStatus(r.id, code); },
+    onClick: (e) => { e.stopPropagation(); decide(r.id, code, r.school); },
   }, label);
   return [btn('Approve', 'A', 'approve'), btn('Reject', 'R', 'reject')];
 }
@@ -327,13 +338,78 @@ function toast(message, type = 'success') {
   setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 250); }, 3000);
 }
 
+// ---------- Confirmation before approving / rejecting ----------
+// Resolves to { note } when confirmed (note is '' for approvals) or null when cancelled.
+// Rejecting requires a note (max 400 chars); it is saved with the admin id as "<admin> - <note>".
+function confirmDecision(status, school) {
+  const reject = status === 'R';
+  const NOTE_MAX = 400;
+  const opener = document.activeElement;
+  return new Promise((resolve) => {
+    const finish = (value) => {
+      window.removeEventListener('keydown', onKey, true);
+      overlay.remove();
+      if (!document.querySelector('.overlay')) document.body.classList.remove('no-scroll');
+      if (opener && opener.isConnected) opener.focus();
+      resolve(value);
+    };
+    // capture phase + stopImmediatePropagation: Esc closes only this dialog, not the details popup under it
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); finish(null); }
+    };
+
+    const error = h('p', { class: 'error note-error', role: 'alert' });
+    const counter = h('span', { class: 'muted note-count' }, `0 / ${NOTE_MAX}`);
+    const note = reject ? h('textarea', {
+      class: 'input note-input', rows: 4, maxLength: NOTE_MAX, placeholder: 'Why is this registration being rejected?',
+      'aria-label': 'Rejection note (required)', 'aria-required': 'true',
+      onInput: (e) => { counter.textContent = `${e.target.value.length} / ${NOTE_MAX}`; if (e.target.value.trim()) { error.textContent = ''; e.target.classList.remove('invalid'); } },
+    }) : null;
+
+    const submit = () => {
+      if (reject && !note.value.trim()) {
+        error.textContent = 'A rejection note is required.';
+        note.classList.add('invalid');
+        note.focus();
+        return;
+      }
+      finish({ note: reject ? note.value.replace(/\s+/g, ' ').trim() : '' });
+    };
+
+    const cancelBtn = h('button', { class: 'btn ghost', type: 'button', onClick: () => finish(null) }, 'Cancel');
+    const overlay = h('div', { class: 'overlay overlay-top', onClick: (e) => e.target === overlay && finish(null) },
+      h('div', { class: `modal confirm ${reject ? 'is-reject' : 'is-approve'}`, role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': 'decide-title' },
+        h('div', { class: 'confirm-body' },
+          h('div', { class: 'warn-icon' }, reject ? '⚠️' : '✅'),
+          h('h2', { id: 'decide-title' }, reject ? 'Reject this registration?' : 'Approve this registration?'),
+          h('p', {}, school ? h('strong', {}, school) : 'This registration', ` will be marked as ${reject ? 'Rejected' : 'Approved'}. This decision is final and cannot be changed later.`),
+          reject && h('div', { class: 'note-field' },
+            h('label', {}, 'Rejection note ', h('span', { class: 'req' }, '*')),
+            note, h('div', { class: 'note-meta' }, error, counter))),
+        h('div', { class: 'confirm-actions' },
+          cancelBtn,
+          h('button', { class: `btn ${reject ? 'danger' : 'success'}`, type: 'button', onClick: submit }, reject ? 'Yes, reject' : 'Yes, approve'))));
+
+    window.addEventListener('keydown', onKey, true);
+    document.body.append(overlay);
+    document.body.classList.add('no-scroll');
+    (reject ? note : cancelBtn).focus(); // reject: start typing the note; approve: safe default is Cancel
+  });
+}
+
+// Ask first, then save. Returns the new status, or null if cancelled / failed.
+async function decide(id, status, school) {
+  const answer = await confirmDecision(status, school);
+  return answer ? updateStatus(id, status, answer.note) : null;
+}
+
 const pendingUpdates = new Set();
-async function updateStatus(id, status) {
+async function updateStatus(id, status, note = '') {
   pendingUpdates.add(id);
   paintRows();
   try {
     await api(`/api/admin/registrations/${id}/status`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, note }),
     });
     const row = isAll() ? [...state.cache.values()].find((x) => x.id === id) : state.rows.find((x) => x.id === id);
     if (row) row.status = status;
