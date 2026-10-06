@@ -280,3 +280,18 @@ img { max-width: 100%; }
 .yp-year:disabled { opacity: 0.3; cursor: not-allowed; }
 .has-error .yearpicker .input { border-color: var(--danger); background: #fff6f6; }
 @keyframes yp-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* ---------- Confirmation dialog ---------- */
+body.no-scroll { overflow: hidden; }
+.dlg-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(12, 21, 102, 0.55); backdrop-filter: blur(3px); animation: dlg-fade 0.15s ease; }
+.dlg { width: 100%; max-width: 440px; background: var(--card); border-radius: var(--radius); border-top: 6px solid var(--yellow); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); animation: dlg-rise 0.2s ease; }
+.dlg-body { padding: 26px 24px 8px; text-align: center; }
+.dlg-icon { font-size: 2.3rem; line-height: 1; }
+.dlg-body h2 { margin: 10px 0 8px; font-size: 1.25rem; color: var(--navy); }
+.dlg-body p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.55; }
+.dlg-detail { margin-top: 12px !important; padding: 8px 12px; background: #eef0ff; border-radius: 10px; color: var(--navy) !important; font-weight: 500; word-break: break-word; }
+.dlg-actions { display: flex; gap: 12px; padding: 20px 24px 24px; }
+.dlg-actions .btn { flex: 1; }
+@keyframes dlg-fade { from { opacity: 0; } }
+@keyframes dlg-rise { from { opacity: 0; transform: translateY(14px); } }
+@media (max-width: 420px) { .dlg-actions { flex-direction: column-reverse; } }

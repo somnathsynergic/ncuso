@@ -4,7 +4,6 @@ import { steps } from '/js/config/formConfig.js';
 const COLUMNS = [
   { key: 'id', label: 'ID', width: 80 },
   { key: 'school', label: 'School', width: 240 },
-  { key: 'udise', label: 'UDISE No.', width: 130 },
   { key: 'district', label: 'District', width: 190 },
   { key: 'type', label: 'Type', width: 190 },
   { key: 'students', label: 'Students', num: true, width: 100 },
@@ -305,7 +304,6 @@ function DataRow(r) {
   },
   h('td', {}, `#${r.id}`),
   h('td', { class: 'strong' }, r.school),
-  h('td', {}, r.udise),
   h('td', {}, r.district),
   h('td', {}, h('span', { class: 'tag-pill' }, r.type)),
   h('td', { class: 'num' }, r.students),

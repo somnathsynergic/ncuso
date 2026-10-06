@@ -124,7 +124,7 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 }
 
 /* approval status + row actions */
-.vtable { min-width: 1500px; }
+.vtable { min-width: 1400px; }
 .vtable thead th.static { padding: 0 14px; color: var(--navy); font-weight: 600; text-align: left; }
 .vtable td.actions-cell { overflow: visible; }
 .status { display: inline-block; padding: 3px 12px; border-radius: 99px; font-size: .75rem; font-weight: 600; }

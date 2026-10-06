@@ -5,6 +5,7 @@ import { Header } from './components/Header.js';
 import { Sidebar } from './components/Sidebar.js';
 import { Field } from './components/Field.js';
 import { Review } from './components/Review.js';
+import { confirmDialog } from './components/ConfirmDialog.js';
 
 const REVIEW = steps.length;
 
@@ -43,6 +44,19 @@ function next() {
   go(state.step + 1);
 }
 
+// Final step: ask the user to confirm before anything is sent
+async function confirmThenSubmit() {
+  const ok = await confirmDialog({
+    icon: '📨',
+    title: 'Submit your details?',
+    message: 'Please make sure everything is correct. Once submitted, you will not be able to change these details.',
+    detail: state.values.schoolName ? `School: ${state.values.schoolName}` : '',
+    confirmLabel: 'Yes, submit',
+    cancelLabel: 'Review again',
+  });
+  if (ok) submit();
+}
+
 async function submit() {
   const errors = validateAll(state.values);
   if (Object.keys(errors).length) {
@@ -73,7 +87,7 @@ function Actions(final = false) {
   return h('div', { class: 'actions' },
     state.step > 0 && h('button', { type: 'button', class: 'btn ghost', onClick: () => go(state.step - 1) }, '← Back'),
     final
-      ? h('button', { type: 'button', class: 'btn primary', disabled: state.status === 'submitting', onClick: submit },
+      ? h('button', { type: 'button', class: 'btn primary', disabled: state.status === 'submitting', onClick: confirmThenSubmit },
         state.status === 'submitting' ? 'Submitting…' : 'Submit Details')
       : h('button', { type: 'submit', class: 'btn primary' }, 'Continue →'));
 }
