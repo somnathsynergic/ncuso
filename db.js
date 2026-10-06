@@ -79,8 +79,11 @@ export async function listRegistrations({ search = '', districtId = null, sort =
      LIMIT ? OFFSET ?`,
     [...params, pageSize, (page - 1) * pageSize],
   );
+  const [[sums]] = await pool.query(
+    `SELECT COALESCE(SUM(r.total_students), 0) AS students, COALESCE(SUM(r.total_teachers), 0) AS teachers ${from} ${whereSql}`, params);
+  const totals = { students: Number(sums.students), teachers: Number(sums.teachers) };
   const [[{ maxId }]] = await pool.query('SELECT MAX(reg_id) AS maxId FROM td_school_reg'); // newest id overall, ignoring filters
-  return { total, rows, maxId: maxId ?? 0 };
+  return { total, rows, maxId: maxId ?? 0, totals };
 }
 
 // Returns one registration keyed by the same field names the form uses,

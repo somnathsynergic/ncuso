@@ -27,7 +27,7 @@ const state = {
   rows: [],            // paged mode: current page
   cache: new Map(),    // all mode: row index -> row
   inflight: new Set(), // all mode: chunk numbers being fetched
-  total: 0, districts: [], loading: true, error: '',
+  total: 0, totals: { students: 0, teachers: 0 }, districts: [], loading: true, error: '',
   seenKey: null,          // localStorage key holding the newest registration id this admin has already seen
   seenHandled: false,
   blinkIds: new Set(),    // rows that are new since the last visit
@@ -105,6 +105,7 @@ async function load() {
     const data = await api(`/api/admin/registrations?${query(state.page, effectiveSize())}`);
     if (mine !== epoch) return;
     state.total = data.total;
+    state.totals = data.totals || state.totals; // students / teachers across ALL matching rows, not just this page
     markNewRows(data);
     const pages = Math.max(1, Math.ceil(data.total / effectiveSize()));
     if (!isAll() && state.page > pages) { state.page = pages; return load(); }
@@ -466,6 +467,19 @@ function onScroll() {
   requestAnimationFrame(() => { ticking = false; paintRows(); });
 }
 
+const nf = new Intl.NumberFormat('en-IN');
+function paintTotals() {
+  const bar = document.getElementById('totals');
+  if (!bar) return;
+  const filtered = Boolean(state.search || state.district);
+  const stat = (label, value) => h('div', { class: 'total-stat' }, h('span', { class: 'total-label' }, label),
+    h('strong', {}, state.loading && !rowCount() ? '…' : nf.format(value)));
+  bar.replaceChildren(
+    h('span', { class: 'total-scope' }, filtered ? 'Totals for current filter' : 'Totals for all registrations'),
+    stat('Total students', state.totals.students),
+    stat('Total teachers', state.totals.teachers));
+}
+
 // Full refresh of table body + footer (header is rebuilt in render() / on sort change)
 function paintTable() {
   const holder = document.getElementById('table-holder');
@@ -477,6 +491,7 @@ function paintTable() {
   old ? old.replaceWith(next) : holder.append(next);
   const thead = wrap.querySelector('thead');
   thead.replaceWith(Head());
+  paintTotals();
   paintRows();
 }
 
@@ -511,7 +526,7 @@ function render() {
     h('main', { class: 'content' },
       h('div', { class: 'card' },
         h('div', { class: 'toolbar' }, searchInput, districtSelect, sizeSelect),
-        h('div', { id: 'table-holder' }, h('div', { id: 'table-wrap', class: 'table-wrap' }, scroller)))));
+        h('div', { id: 'table-holder' }, h('div', { id: 'table-wrap', class: 'table-wrap' }, scroller, h('div', { id: 'totals', class: 'totals-bar', 'aria-live': 'polite' }))))));
   paintTable();
 }
 

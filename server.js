@@ -95,7 +95,7 @@ app.get('/api/admin/registrations', requireAdmin, async (req, res) => {
   const q = req.query;
   const int = (v, def, min, max) => Math.min(max, Math.max(min, Number.parseInt(v, 10) || def));
   try {
-    const { total, rows, maxId } = await listRegistrations({
+    const { total, rows, maxId, totals } = await listRegistrations({
       search: String(q.search || '').trim().slice(0, 100),
       districtId: Number.parseInt(q.district, 10) || null,
       sort: String(q.sort || 'submitted'),
@@ -103,7 +103,7 @@ app.get('/api/admin/registrations', requireAdmin, async (req, res) => {
       page: int(q.page, 1, 1, 1e6),
       pageSize: [10, 25, 50, 100].includes(Number(q.pageSize)) ? Number(q.pageSize) : 10,
     });
-    res.json({ total, rows, maxId });
+    res.json({ total, rows, maxId, totals });
   } catch (e) {
     console.error('Failed to list registrations:', e.message);
     res.status(500).json({ error: 'Could not load registrations' });
