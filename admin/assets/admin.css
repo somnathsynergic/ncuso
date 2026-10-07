@@ -193,7 +193,7 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .nav-link:hover { background: rgba(255, 255, 255, .12); opacity: 1; }
 .nav-link.active { background: var(--yellow); color: var(--navy-dark); opacity: 1; font-weight: 600; }
 .report-title { margin: 0 0 14px; color: var(--navy); }
-.report-toolbar { grid-template-columns: 1fr 240px; }
+.report-toolbar { grid-template-columns: 240px; }
 .report-scope { margin-bottom: 10px; }
 .report-table { width: 100%; border-collapse: collapse; }
 .report-table th, .report-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); }

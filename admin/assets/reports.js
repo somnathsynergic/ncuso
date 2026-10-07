@@ -5,7 +5,7 @@ const nf = new Intl.NumberFormat('en-IN');
 const slug = location.pathname.split('/')[3];
 const report = REPORTS.find((r) => r.slug === slug);
 if (!report) location.replace(`/admin/reports/${REPORTS[0].slug}`); // /admin/reports → first report
-const state = { search: '', district: '', districts: [], data: null, totalSchools: 0, loading: true, error: '' };
+const state = { district: '', districts: [], data: null, totalSchools: 0, loading: true, error: '' };
 const root = document.getElementById('app');
 
 async function api(url) {
@@ -23,7 +23,7 @@ async function load() {
   state.error = '';
   paintReport();
   try {
-    const qs = new URLSearchParams({ search: state.search, district: state.district });
+    const qs = new URLSearchParams({ district: state.district });
     const data = await api(`/api/admin/reports/${slug === 'non-compliance' ? 'non-compliance' : 'summary'}?${qs}`);
     if (mine !== epoch) return;
     state.data = data;
@@ -40,7 +40,7 @@ async function load() {
 
 function scopeLabel() {
   const name = state.districts.find((d) => String(d.id) === state.district)?.name;
-  return `${name || 'All districts'}${state.search ? ` · matching “${state.search}”` : ''}`;
+  return `${name || 'All districts'}`;
 }
 
 // Table of { item, count } rows with the share of schools as plain text
@@ -83,11 +83,6 @@ function paintReport() {
 }
 
 function render() {
-  let timer;
-  const searchInput = h('input', {
-    class: 'input', type: 'search', placeholder: 'Search school, UDISE, mobile or circle…', value: state.search,
-    onInput: (e) => { clearTimeout(timer); const v = e.target.value.trim(); timer = setTimeout(() => { state.search = v; load(); }, 300); },
-  });
   const districtSelect = h('select', { class: 'input select', onChange: (e) => { state.district = e.target.value; load(); } },
     h('option', { value: '' }, 'All districts'),
     state.districts.map((d) => h('option', { value: d.id, selected: String(d.id) === state.district }, d.name)));
@@ -96,7 +91,7 @@ function render() {
     h('main', { class: 'content' },
       h('div', { class: 'card' },
         h('h2', { class: 'report-title' }, report.title),
-        h('div', { class: 'toolbar report-toolbar' }, searchInput, districtSelect),
+        h('div', { class: 'toolbar report-toolbar' }, districtSelect),
         h('div', { id: 'report' }))));
   paintReport();
 }
