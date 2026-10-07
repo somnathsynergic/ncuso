@@ -62,7 +62,7 @@ app.get('/admin/login', (req, res) =>
   isAuthed(req) ? res.redirect('/admin') : res.sendFile(path.join(ADMIN_DIR, 'login.html')));
 
 // Lightweight "am I logged in?" check used by the pages when they are restored from history
-app.get('/admin/reports', (req, res) =>
+app.get('/admin/reports/:slug?', (req, res) =>
   isAuthed(req) ? res.sendFile(path.join(ADMIN_DIR, 'reports.html')) : res.redirect('/admin/login'));
 
 app.get('/api/admin/session', requireAdmin, (req, res) => res.json({ ok: true, admin: req.adminId }));

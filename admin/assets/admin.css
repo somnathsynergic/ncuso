@@ -213,3 +213,11 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .stat-box { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 16px 20px; background: #f8f9fe; border: 1px solid var(--line); border-radius: 12px; }
 .stat-box strong { font-size: 2rem; color: var(--navy); }
 .loading-fade { opacity: .5; transition: opacity .2s; }
+.nav-toggle { background: none; border: 0; font: inherit; font-weight: 500; cursor: pointer; }
+.nav-group { position: relative; }
+.submenu { display: none; position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; min-width: 280px; padding: 6px; background: #fff; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--line); }
+.nav-group.open .submenu { display: block; }
+.sub-link { display: block; padding: 10px 14px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: .92rem; }
+.sub-link:hover { background: #eef0ff; }
+.sub-link.active { background: #eef0ff; color: var(--navy); font-weight: 600; }
+.nav-group.open .caret { display: inline-block; transform: rotate(180deg); }

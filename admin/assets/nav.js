@@ -27,19 +27,40 @@ export function confirmLogout() {
   overlay.querySelector('.btn.ghost').focus(); // safe default
 }
 
-const MENU = [
-  { key: 'dashboard', label: 'Dashboard', href: '/admin' },
-  { key: 'reports', label: 'Reports', href: '/admin/reports' },
+// Reports submenu, in display order
+export const REPORTS = [
+  { slug: 'previously-applied-noc', title: 'Previously applied for NOC' },
+  { slug: 'school-type', title: 'Type of school' },
+  { slug: 'teachers', title: 'Teachers available' },
+  { slug: 'untrained-teachers', title: 'Untrained teachers' },
+  { slug: 'sanctioned-plan', title: 'Sanctioned building plan' },
+  { slug: 'needs-lease', title: 'Need to take property on lease' },
+  { slug: 'lease-20-years', title: '20-year lease deed possible' },
+  { slug: 'non-compliance', title: 'Non-compliance items' },
 ];
 
-// Shared header with the menu; `active` is the key of the current page
-export const Topbar = (active, subtitle) => h('header', { class: 'topbar' },
-  h('div', { class: 'brand' },
-    h('img', { src: '/img/logo.png', alt: '', class: 'brand-logo' }),
-    h('div', {},
-      h('span', { class: 'brand-short' }, 'NCUSO'),
-      h('small', {}, 'National Council for Unaided School Organization'),
-      h('strong', { class: 'brand-sub' }, subtitle))),
-  h('nav', { class: 'topnav', 'aria-label': 'Admin menu' },
-    MENU.map((m) => h('a', { href: m.href, class: `nav-link${m.key === active ? ' active' : ''}`, 'aria-current': m.key === active ? 'page' : null }, m.label))),
-  h('button', { class: 'btn ghost', type: 'button', onClick: confirmLogout }, 'Log out'));
+// Shared header with the menu; `active` is 'dashboard' or 'reports' (activeReport = slug of the open report)
+export function Topbar(active, subtitle, activeReport = '') {
+  const toggle = h('button', {
+    class: `nav-link nav-toggle${active === 'reports' ? ' active' : ''}`, type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false',
+    onClick: (e) => { e.stopPropagation(); setOpen(!group.classList.contains('open')); },
+  }, 'Reports ', h('span', { class: 'caret' }, '▾'));
+  const submenu = h('div', { class: 'submenu', role: 'menu' },
+    REPORTS.map((r) => h('a', { href: `/admin/reports/${r.slug}`, role: 'menuitem', class: `sub-link${r.slug === activeReport ? ' active' : ''}` }, r.title)));
+  const group = h('div', { class: 'nav-group' }, toggle, submenu);
+  const setOpen = (open) => { group.classList.toggle('open', open); toggle.setAttribute('aria-expanded', String(open)); };
+  document.addEventListener('click', (e) => { if (!group.contains(e.target)) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+
+  return h('header', { class: 'topbar' },
+    h('div', { class: 'brand' },
+      h('img', { src: '/img/logo.png', alt: '', class: 'brand-logo' }),
+      h('div', {},
+        h('span', { class: 'brand-short' }, 'NCUSO'),
+        h('small', {}, 'National Council for Unaided School Organization'),
+        h('strong', { class: 'brand-sub' }, subtitle))),
+    h('nav', { class: 'topnav', 'aria-label': 'Admin menu' },
+      h('a', { href: '/admin', class: `nav-link${active === 'dashboard' ? ' active' : ''}`, 'aria-current': active === 'dashboard' ? 'page' : null }, 'Dashboard'),
+      group),
+    h('button', { class: 'btn ghost', type: 'button', onClick: confirmLogout }, 'Log out'));
+}

@@ -1,8 +1,11 @@
 import { h } from '/js/components/dom.js';
-import { Topbar } from '/admin/assets/nav.js';
+import { Topbar, REPORTS } from '/admin/assets/nav.js';
 
 const nf = new Intl.NumberFormat('en-IN');
-const state = { search: '', district: '', districts: [], summary: null, nonCompliance: [], totalSchools: 0, loading: true, error: '' };
+const slug = location.pathname.split('/')[3];
+const report = REPORTS.find((r) => r.slug === slug);
+if (!report) location.replace(`/admin/reports/${REPORTS[0].slug}`); // /admin/reports → first report
+const state = { search: '', district: '', districts: [], data: null, totalSchools: 0, loading: true, error: '' };
 const root = document.getElementById('app');
 
 async function api(url) {
@@ -21,17 +24,14 @@ async function load() {
   paintReport();
   try {
     const qs = new URLSearchParams({ search: state.search, district: state.district });
-    const [summary, nc] = await Promise.all([
-      api(`/api/admin/reports/summary?${qs}`), api(`/api/admin/reports/non-compliance?${qs}`)]);
+    const data = await api(`/api/admin/reports/${slug === 'non-compliance' ? 'non-compliance' : 'summary'}?${qs}`);
     if (mine !== epoch) return;
-    state.summary = summary;
-    state.nonCompliance = nc.items;
-    state.totalSchools = summary.totalSchools;
+    state.data = data;
+    state.totalSchools = data.totalSchools;
   } catch (e) {
     if (mine !== epoch) return;
     state.error = e.message;
-    state.summary = null;
-    state.nonCompliance = [];
+    state.data = null;
     state.totalSchools = 0;
   }
   state.loading = false;
@@ -43,51 +43,43 @@ function scopeLabel() {
   return `${name || 'All districts'}${state.search ? ` · matching “${state.search}”` : ''}`;
 }
 
-// Table of { item, count } rows with a share-of-schools bar
-function CountTable(title, items, label) {
+// Table of { item, count } rows with the share of schools as plain text
+function CountTable(items, label) {
   const total = state.totalSchools;
-  const rows = items.map((it, i) => {
-    const pct = total ? (it.count / total) * 100 : 0;
-    return h('tr', {},
-      h('td', { class: 'muted' }, String(i + 1)),
-      h('td', { class: 'strong' }, it.item),
-      h('td', { class: 'num' }, nf.format(it.count)),
-      h('td', { class: 'bar-cell' },
-        h('div', { class: 'meter', title: `${pct.toFixed(1)}%` }, h('span', { style: `width:${pct}%` })),
-        h('span', { class: 'muted pct' }, `${pct.toFixed(1)}%`)));
-  });
-  return h('section', { class: 'report-section' },
-    h('h3', {}, title),
-    h('div', { class: 'table-wrap' },
-      h('table', { class: 'report-table' },
-        h('thead', {}, h('tr', {},
-          h('th', {}, '#'), h('th', {}, label), h('th', { class: 'num' }, 'Schools'), h('th', {}, '% of schools'))),
-        h('tbody', {}, rows))));
+  return h('div', { class: 'table-wrap' },
+    h('table', { class: 'report-table' },
+      h('thead', {}, h('tr', {},
+        h('th', {}, '#'), h('th', {}, label), h('th', { class: 'num' }, 'Schools'), h('th', { class: 'num' }, '% of schools'))),
+      h('tbody', {}, items.map((it, i) => h('tr', {},
+        h('td', { class: 'muted' }, String(i + 1)),
+        h('td', { class: 'strong' }, it.item),
+        h('td', { class: 'num' }, nf.format(it.count)),
+        h('td', { class: 'num muted' }, `${(total ? (it.count / total) * 100 : 0).toFixed(1)}%`))))));
 }
 
 // Single-figure report
-const Stat = (title, value, note) => h('section', { class: 'report-section' },
-  h('h3', {}, title),
-  h('div', { class: 'stat-box' }, h('strong', {}, nf.format(value)), note && h('span', { class: 'muted' }, note)));
+const Stat = (value, note) => h('div', { class: 'stat-box' }, h('strong', {}, nf.format(value)), note && h('span', { class: 'muted' }, note));
+
+// What each report shows, from the loaded data
+const BODY = {
+  'previously-applied-noc': (d) => CountTable(d.groups.previouslyAppliedNoc, 'Previously applied for NOC'),
+  'school-type': (d) => CountTable(d.groups.schoolType, 'Type of school'),
+  teachers: (d) => Stat(d.teachers, 'Total teachers available'),
+  'untrained-teachers': (d) => Stat(d.untrained, `Total untrained teachers${d.teachers ? ` (${((d.untrained / d.teachers) * 100).toFixed(1)}% of ${nf.format(d.teachers)} teachers)` : ''}`),
+  'sanctioned-plan': (d) => CountTable(d.groups.sanctionedPlan, 'Has a sanctioned building plan'),
+  'needs-lease': (d) => CountTable(d.groups.needsLease, 'Needs to take the property on lease'),
+  'lease-20-years': (d) => CountTable(d.groups.lease20Possible, '20-year lease deed possible'),
+  'non-compliance': (d) => CountTable(d.items, 'Non-compliance item'),
+};
 
 function paintReport() {
   const box = document.getElementById('report');
-  if (!box) return;
+  if (!box || !report) return;
   if (state.error) return box.replaceChildren(h('p', { class: 'error' }, state.error));
-  const sm = state.summary;
-  if (!sm) return box.replaceChildren(h('p', { class: 'muted' }, 'Loading…'));
-  const untrainedPct = sm.teachers ? ` (${((sm.untrained / sm.teachers) * 100).toFixed(1)}% of teachers)` : '';
+  if (!state.data) return box.replaceChildren(h('p', { class: 'muted' }, 'Loading…'));
   box.replaceChildren(
     h('div', { class: 'report-scope muted' }, `${scopeLabel()} — ${nf.format(state.totalSchools)} schools`),
-    h('div', { class: state.loading ? 'loading-fade' : '' },
-      CountTable('1. Schools that previously applied for NOC', sm.groups.previouslyAppliedNoc, 'Previously applied'),
-      CountTable('2. Type of school', sm.groups.schoolType, 'Type of school'),
-      Stat('3. Number of teachers available', sm.teachers, 'Total teachers across schools'),
-      Stat('4. Number of untrained teachers', sm.untrained, `Total untrained teachers${untrainedPct}`),
-      CountTable('5. Schools with a sanctioned building plan', sm.groups.sanctionedPlan, 'Sanctioned building plan'),
-      CountTable('6. Schools that need to take the property on lease', sm.groups.needsLease, 'Needs lease'),
-      CountTable('7. Lease deed for 20 years of the school building is possible', sm.groups.lease20Possible, '20-year lease possible'),
-      CountTable('8. Non-compliance items', state.nonCompliance, 'Non-compliance item')));
+    h('div', { class: state.loading ? 'loading-fade' : '' }, BODY[slug](state.data)));
 }
 
 function render() {
@@ -100,10 +92,10 @@ function render() {
     h('option', { value: '' }, 'All districts'),
     state.districts.map((d) => h('option', { value: d.id, selected: String(d.id) === state.district }, d.name)));
   root.replaceChildren(
-    Topbar('reports', 'Admin Dashboard · Reports'),
+    Topbar('reports', 'Admin Dashboard · Reports', slug),
     h('main', { class: 'content' },
       h('div', { class: 'card' },
-        h('h2', { class: 'report-title' }, 'Reports'),
+        h('h2', { class: 'report-title' }, report.title),
         h('div', { class: 'toolbar report-toolbar' }, searchInput, districtSelect),
         h('div', { id: 'report' }))));
   paintReport();
@@ -119,6 +111,7 @@ window.addEventListener('pageshow', (e) => {
 });
 
 (async function init() {
+  if (!report) return;
   render();
   load();
   try { state.districts = await api('/api/districts'); render(); } catch { /* filter stays on "All" */ }
