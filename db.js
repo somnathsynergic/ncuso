@@ -86,9 +86,8 @@ export async function listRegistrations({ search = '', districtId = null, sort =
   return { total, rows, maxId: maxId ?? 0, totals };
 }
 
-// Counts schools per non-compliance item for the same search/district filters as the dashboard.
-// Counted in JS rather than JSON_TABLE so it works on any MySQL version.
-export async function nonComplianceReport(itemNames, { search = '', districtId = null }) {
+// WHERE clause shared by the reports: same search/district filters as the dashboard
+function reportFilter({ search = '', districtId = null }) {
   const where = [];
   const params = [];
   if (search) {
@@ -100,8 +99,35 @@ export async function nonComplianceReport(itemNames, { search = '', districtId =
     where.push('r.district_id = ?');
     params.push(districtId);
   }
+  return { whereSql: where.length ? `WHERE ${where.join(' AND ')}` : '', params };
+}
+
+// Summary reports. `groups` maps a report key to { column, options }: schools are counted per option
+// (options with no schools show 0). Also returns teacher totals and the number of schools.
+const GROUP_COLUMNS = {
+  previouslyAppliedNoc: 'previously_applied_noc', schoolType: 'school_type', sanctionedPlan: 'sanctioned_building_plan',
+  needsLease: 'needs_lease', lease20Possible: 'lease_20_years_possible',
+};
+export async function schoolSummaryReport(options, filters) {
+  const { whereSql, params } = reportFilter(filters);
+  const from = `FROM td_school_reg r ${whereSql}`;
+  const [[sums]] = await pool.query(
+    `SELECT COUNT(*) AS schools, COALESCE(SUM(r.total_teachers), 0) AS teachers, COALESCE(SUM(r.untrained_teachers), 0) AS untrained ${from}`, params);
+  const groups = {};
+  for (const [key, col] of Object.entries(GROUP_COLUMNS)) { // col comes from the constant above, never from user input
+    const [rows] = await pool.query(`SELECT r.${col} AS v, COUNT(*) AS n ${from} GROUP BY r.${col}`, params);
+    const byValue = new Map(rows.map((r) => [r.v, Number(r.n)]));
+    groups[key] = options[key].map((item) => ({ item, count: byValue.get(item) ?? 0 }));
+  }
+  return { totalSchools: Number(sums.schools), teachers: Number(sums.teachers), untrained: Number(sums.untrained), groups };
+}
+
+// Counts schools per non-compliance item for the same search/district filters as the dashboard.
+// Counted in JS rather than JSON_TABLE so it works on any MySQL version.
+export async function nonComplianceReport(itemNames, filters) {
+  const { whereSql, params } = reportFilter(filters);
   const [rows] = await pool.query(
-    `SELECT r.non_compliances FROM td_school_reg r ${where.length ? `WHERE ${where.join(' AND ')}` : ''}`, params);
+    `SELECT r.non_compliances FROM td_school_reg r ${whereSql}`, params);
   const counts = new Map(itemNames.map((n) => [n, 0]));
   for (const r of rows) {
     let list = r.non_compliances;

@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import 'dotenv/config'
 import { fileURLToPath } from 'node:url';
-import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus, nonComplianceReport } from './db.js';
+import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus, nonComplianceReport, schoolSummaryReport } from './db.js';
 import { authenticate, startSession, endSession, isAuthed, requireAdmin, loginBlocked, recordFail, clearFails } from './auth.js';
 import { allFields, steps } from './public/js/config/formConfig.js';
 import { validateAll } from './public/js/validators.js';
@@ -115,12 +115,24 @@ app.get('/api/admin/registrations', requireAdmin, async (req, res) => {
 
 // Non-compliance report: schools per item, using the dashboard's search/district filters
 const NON_COMPLIANCE_ITEMS = steps.flatMap((st) => st.fields).find((f) => f.name === 'nonCompliances').options;
+const REPORT_FIELDS = ['previouslyAppliedNoc', 'schoolType', 'sanctionedPlan', 'needsLease', 'lease20Possible'];
+const REPORT_OPTIONS = Object.fromEntries(REPORT_FIELDS.map((n) => [n, allFields.find((f) => f.name === n).options]));
+const reportFilters = (q) => ({
+  search: String(q.search || '').trim().slice(0, 100),
+  districtId: Number.parseInt(q.district, 10) || null,
+});
+app.get('/api/admin/reports/summary', requireAdmin, async (req, res) => {
+  try {
+    res.json(await schoolSummaryReport(REPORT_OPTIONS, reportFilters(req.query)));
+  } catch (e) {
+    console.error('Failed to build report:', e.message);
+    res.status(500).json({ error: 'Could not load the report' });
+  }
+});
+
 app.get('/api/admin/reports/non-compliance', requireAdmin, async (req, res) => {
   try {
-    res.json(await nonComplianceReport(NON_COMPLIANCE_ITEMS, {
-      search: String(req.query.search || '').trim().slice(0, 100),
-      districtId: Number.parseInt(req.query.district, 10) || null,
-    }));
+    res.json(await nonComplianceReport(NON_COMPLIANCE_ITEMS, reportFilters(req.query)));
   } catch (e) {
     console.error('Failed to build report:', e.message);
     res.status(500).json({ error: 'Could not load the report' });

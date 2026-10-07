@@ -2,7 +2,7 @@ import { h } from '/js/components/dom.js';
 import { Topbar } from '/admin/assets/nav.js';
 
 const nf = new Intl.NumberFormat('en-IN');
-const state = { search: '', district: '', districts: [], items: [], totalSchools: 0, loading: true, error: '' };
+const state = { search: '', district: '', districts: [], summary: null, nonCompliance: [], totalSchools: 0, loading: true, error: '' };
 const root = document.getElementById('app');
 
 async function api(url) {
@@ -20,14 +20,18 @@ async function load() {
   state.error = '';
   paintReport();
   try {
-    const data = await api(`/api/admin/reports/non-compliance?${new URLSearchParams({ search: state.search, district: state.district })}`);
+    const qs = new URLSearchParams({ search: state.search, district: state.district });
+    const [summary, nc] = await Promise.all([
+      api(`/api/admin/reports/summary?${qs}`), api(`/api/admin/reports/non-compliance?${qs}`)]);
     if (mine !== epoch) return;
-    state.items = data.items;
-    state.totalSchools = data.totalSchools;
+    state.summary = summary;
+    state.nonCompliance = nc.items;
+    state.totalSchools = summary.totalSchools;
   } catch (e) {
     if (mine !== epoch) return;
     state.error = e.message;
-    state.items = [];
+    state.summary = null;
+    state.nonCompliance = [];
     state.totalSchools = 0;
   }
   state.loading = false;
@@ -39,12 +43,10 @@ function scopeLabel() {
   return `${name || 'All districts'}${state.search ? ` · matching “${state.search}”` : ''}`;
 }
 
-function paintReport() {
-  const box = document.getElementById('report');
-  if (!box) return;
-  if (state.error) return box.replaceChildren(h('p', { class: 'error' }, state.error));
+// Table of { item, count } rows with a share-of-schools bar
+function CountTable(title, items, label) {
   const total = state.totalSchools;
-  const body = state.items.map((it, i) => {
+  const rows = items.map((it, i) => {
     const pct = total ? (it.count / total) * 100 : 0;
     return h('tr', {},
       h('td', { class: 'muted' }, String(i + 1)),
@@ -54,14 +56,38 @@ function paintReport() {
         h('div', { class: 'meter', title: `${pct.toFixed(1)}%` }, h('span', { style: `width:${pct}%` })),
         h('span', { class: 'muted pct' }, `${pct.toFixed(1)}%`)));
   });
-  box.replaceChildren(
-    h('div', { class: 'report-scope muted' }, `${scopeLabel()} — ${state.loading ? '…' : nf.format(total)} schools`),
-    h('div', { class: `table-wrap${state.loading ? ' loading' : ''}` },
+  return h('section', { class: 'report-section' },
+    h('h3', {}, title),
+    h('div', { class: 'table-wrap' },
       h('table', { class: 'report-table' },
         h('thead', {}, h('tr', {},
-          h('th', {}, '#'), h('th', {}, 'Non-compliance item'),
-          h('th', { class: 'num' }, 'Schools'), h('th', {}, '% of schools'))),
-        h('tbody', {}, body.length ? body : h('tr', {}, h('td', { colSpan: 4, class: 'empty' }, state.loading ? 'Loading…' : 'No data.'))))));
+          h('th', {}, '#'), h('th', {}, label), h('th', { class: 'num' }, 'Schools'), h('th', {}, '% of schools'))),
+        h('tbody', {}, rows))));
+}
+
+// Single-figure report
+const Stat = (title, value, note) => h('section', { class: 'report-section' },
+  h('h3', {}, title),
+  h('div', { class: 'stat-box' }, h('strong', {}, nf.format(value)), note && h('span', { class: 'muted' }, note)));
+
+function paintReport() {
+  const box = document.getElementById('report');
+  if (!box) return;
+  if (state.error) return box.replaceChildren(h('p', { class: 'error' }, state.error));
+  const sm = state.summary;
+  if (!sm) return box.replaceChildren(h('p', { class: 'muted' }, 'Loading…'));
+  const untrainedPct = sm.teachers ? ` (${((sm.untrained / sm.teachers) * 100).toFixed(1)}% of teachers)` : '';
+  box.replaceChildren(
+    h('div', { class: 'report-scope muted' }, `${scopeLabel()} — ${nf.format(state.totalSchools)} schools`),
+    h('div', { class: state.loading ? 'loading-fade' : '' },
+      CountTable('1. Schools that previously applied for NOC', sm.groups.previouslyAppliedNoc, 'Previously applied'),
+      CountTable('2. Type of school', sm.groups.schoolType, 'Type of school'),
+      Stat('3. Number of teachers available', sm.teachers, 'Total teachers across schools'),
+      Stat('4. Number of untrained teachers', sm.untrained, `Total untrained teachers${untrainedPct}`),
+      CountTable('5. Schools with a sanctioned building plan', sm.groups.sanctionedPlan, 'Sanctioned building plan'),
+      CountTable('6. Schools that need to take the property on lease', sm.groups.needsLease, 'Needs lease'),
+      CountTable('7. Lease deed for 20 years of the school building is possible', sm.groups.lease20Possible, '20-year lease possible'),
+      CountTable('8. Non-compliance items', state.nonCompliance, 'Non-compliance item')));
 }
 
 function render() {
@@ -77,7 +103,7 @@ function render() {
     Topbar('reports', 'Admin Dashboard · Reports'),
     h('main', { class: 'content' },
       h('div', { class: 'card' },
-        h('h2', { class: 'report-title' }, 'Non-compliance report'),
+        h('h2', { class: 'report-title' }, 'Reports'),
         h('div', { class: 'toolbar report-toolbar' }, searchInput, districtSelect),
         h('div', { id: 'report' }))));
   paintReport();
