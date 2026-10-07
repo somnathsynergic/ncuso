@@ -2,9 +2,9 @@ import express from 'express';
 import path from 'node:path';
 import 'dotenv/config'
 import { fileURLToPath } from 'node:url';
-import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus } from './db.js';
+import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus, nonComplianceReport } from './db.js';
 import { authenticate, startSession, endSession, isAuthed, requireAdmin, loginBlocked, recordFail, clearFails } from './auth.js';
-import { allFields } from './public/js/config/formConfig.js';
+import { allFields, steps } from './public/js/config/formConfig.js';
 import { validateAll } from './public/js/validators.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,6 +62,9 @@ app.get('/admin/login', (req, res) =>
   isAuthed(req) ? res.redirect('/admin') : res.sendFile(path.join(ADMIN_DIR, 'login.html')));
 
 // Lightweight "am I logged in?" check used by the pages when they are restored from history
+app.get('/admin/reports', (req, res) =>
+  isAuthed(req) ? res.sendFile(path.join(ADMIN_DIR, 'reports.html')) : res.redirect('/admin/login'));
+
 app.get('/api/admin/session', requireAdmin, (req, res) => res.json({ ok: true, admin: req.adminId }));
 
 app.post('/api/admin/login', async (req, res) => {
@@ -107,6 +110,20 @@ app.get('/api/admin/registrations', requireAdmin, async (req, res) => {
   } catch (e) {
     console.error('Failed to list registrations:', e.message);
     res.status(500).json({ error: 'Could not load registrations' });
+  }
+});
+
+// Non-compliance report: schools per item, using the dashboard's search/district filters
+const NON_COMPLIANCE_ITEMS = steps.flatMap((st) => st.fields).find((f) => f.name === 'nonCompliances').options;
+app.get('/api/admin/reports/non-compliance', requireAdmin, async (req, res) => {
+  try {
+    res.json(await nonComplianceReport(NON_COMPLIANCE_ITEMS, {
+      search: String(req.query.search || '').trim().slice(0, 100),
+      districtId: Number.parseInt(req.query.district, 10) || null,
+    }));
+  } catch (e) {
+    console.error('Failed to build report:', e.message);
+    res.status(500).json({ error: 'Could not load the report' });
   }
 });
 

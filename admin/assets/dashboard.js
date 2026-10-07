@@ -1,5 +1,6 @@
 import { h } from '/js/components/dom.js';
 import { steps } from '/js/config/formConfig.js';
+import { Topbar } from '/admin/assets/nav.js';
 
 const COLUMNS = [
   { key: 'id', label: 'ID', width: 80 },
@@ -216,34 +217,6 @@ async function openDetail(id) {
     body.replaceChildren(h('p', { class: 'error' }, e.message));
   }
 }
-
-// ---------- Logout confirmation ----------
-function confirmLogout() {
-  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); document.body.classList.remove('no-scroll'); };
-  const onKey = (e) => e.key === 'Escape' && close();
-  const confirmBtn = h('button', {
-    class: 'btn danger', type: 'button',
-    onClick: async () => {
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Logging out…';
-      try { await fetch('/api/admin/logout', { method: 'POST' }); } finally { location.replace('/admin/login'); }
-    },
-  }, 'Yes, log out');
-  const overlay = h('div', { class: 'overlay', onClick: (e) => e.target === overlay && close() },
-    h('div', { class: 'modal confirm', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': 'logout-title' },
-      h('div', { class: 'confirm-body' },
-        h('div', { class: 'warn-icon' }, '⚠️'),
-        h('h2', { id: 'logout-title' }, 'Log out?'),
-        h('p', {}, 'You will be signed out of the admin dashboard and will need to log in again to view registrations.')),
-      h('div', { class: 'confirm-actions' },
-        h('button', { class: 'btn ghost', type: 'button', onClick: close }, 'Cancel'),
-        confirmBtn)));
-  document.body.append(overlay);
-  document.body.classList.add('no-scroll');
-  document.addEventListener('keydown', onKey);
-  overlay.querySelector('.btn.ghost').focus(); // safe default
-}
-
 
 // ---------- Table (virtualized) ----------
 function Pagination() {
@@ -522,14 +495,7 @@ function render() {
       h('tbody', { id: 'tbody' })));
 
   root.replaceChildren(
-    h('header', { class: 'topbar' },
-      h('div', { class: 'brand' },
-        h('img', { src: '/img/logo.png', alt: '', class: 'brand-logo' }),
-        h('div', {},
-          h('span', { class: 'brand-short' }, 'NCUSO'),
-          h('small', {}, 'National Council for Unaided School Organization'),
-          h('strong', { class: 'brand-sub' }, 'Admin Dashboard · School registrations'))),
-      h('button', { class: 'btn ghost', type: 'button', onClick: confirmLogout }, 'Log out')),
+    Topbar('dashboard', 'Admin Dashboard · School registrations'),
     h('main', { class: 'content' },
       h('div', { class: 'card' },
         h('div', { class: 'toolbar' }, searchInput, districtSelect, sizeSelect),

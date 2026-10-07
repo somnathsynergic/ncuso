@@ -86,6 +86,32 @@ export async function listRegistrations({ search = '', districtId = null, sort =
   return { total, rows, maxId: maxId ?? 0, totals };
 }
 
+// Counts schools per non-compliance item for the same search/district filters as the dashboard.
+// Counted in JS rather than JSON_TABLE so it works on any MySQL version.
+export async function nonComplianceReport(itemNames, { search = '', districtId = null }) {
+  const where = [];
+  const params = [];
+  if (search) {
+    const like = `%${search.replace(/[\%_]/g, '\$&')}%`;
+    where.push('(r.school_name LIKE ? OR r.udise_no LIKE ? OR r.mobile_no LIKE ? OR r.circle_name LIKE ?)');
+    params.push(like, like, like, like);
+  }
+  if (districtId) {
+    where.push('r.district_id = ?');
+    params.push(districtId);
+  }
+  const [rows] = await pool.query(
+    `SELECT r.non_compliances FROM td_school_reg r ${where.length ? `WHERE ${where.join(' AND ')}` : ''}`, params);
+  const counts = new Map(itemNames.map((n) => [n, 0]));
+  for (const r of rows) {
+    let list = r.non_compliances;
+    if (typeof list === 'string') { try { list = JSON.parse(list); } catch { list = []; } }
+    if (!Array.isArray(list)) continue;
+    for (const n of new Set(list)) if (counts.has(n)) counts.set(n, counts.get(n) + 1);
+  }
+  return { totalSchools: rows.length, items: [...counts].map(([item, count]) => ({ item, count })) };
+}
+
 // Returns one registration keyed by the same field names the form uses,
 // so the admin popup can reuse the form config for labels.
 export async function getRegistration(id) {

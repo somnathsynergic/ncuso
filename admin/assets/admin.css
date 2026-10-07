@@ -186,3 +186,25 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .total-label { font-size: .82rem; color: var(--muted); }
 .total-stat strong { font-size: 1.1rem; color: var(--navy); font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) { .totals-bar { justify-content: space-between; } .total-scope { flex: 0 0 100%; } }
+
+/* ---------- Menu & reports ---------- */
+.topnav { display: flex; gap: 6px; margin-left: auto; margin-right: 12px; }
+.nav-link { color: #fff; text-decoration: none; font-weight: 500; padding: 8px 16px; border-radius: 10px; opacity: .85; }
+.nav-link:hover { background: rgba(255, 255, 255, .12); opacity: 1; }
+.nav-link.active { background: var(--yellow); color: var(--navy-dark); opacity: 1; font-weight: 600; }
+.report-title { margin: 0 0 14px; color: var(--navy); }
+.report-toolbar { grid-template-columns: 1fr 240px; }
+.report-scope { margin-bottom: 10px; }
+.report-table { width: 100%; border-collapse: collapse; }
+.report-table th, .report-table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+.report-table th { color: var(--navy); font-weight: 600; background: #f8f9fe; }
+.report-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.report-table .bar-cell { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+.meter { flex: 1; height: 10px; border-radius: 6px; background: #e9ecf8; overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--navy); border-radius: 6px; }
+.pct { width: 52px; text-align: right; }
+@media (max-width: 700px) {
+  .report-toolbar { grid-template-columns: 1fr; }
+  .topbar { flex-wrap: wrap; }
+  .topnav { order: 3; width: 100%; margin: 0; }
+}
