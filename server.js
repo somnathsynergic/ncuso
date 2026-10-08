@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import 'dotenv/config'
 import { fileURLToPath } from 'node:url';
-import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus, nonComplianceReport, schoolSummaryReport, districtSummaryReport } from './db.js';
+import { getDistricts, insertSchoolReg, listRegistrations, getRegistration, setApprovalStatus, nonComplianceReport, schoolSummaryReport, districtSummaryReport, nonComplianceImpactReport } from './db.js';
 import { authenticate, startSession, endSession, isAuthed, requireAdmin, loginBlocked, recordFail, clearFails } from './auth.js';
 import { allFields, steps } from './public/js/config/formConfig.js';
 import { validateAll } from './public/js/validators.js';
@@ -133,6 +133,16 @@ app.get('/api/admin/reports/summary', requireAdmin, async (req, res) => {
 app.get('/api/admin/reports/district-summary', requireAdmin, async (_req, res) => {
   try {
     res.json(await districtSummaryReport(REPORT_OPTIONS, NON_COMPLIANCE_ITEMS));
+  } catch (e) {
+    console.error('Failed to build report:', e.message);
+    res.status(500).json({ error: 'Could not load the report' });
+  }
+});
+
+const ROPA_ITEM = 'PAY AS PER ROPA 2009';
+app.get('/api/admin/reports/ropa', requireAdmin, async (req, res) => {
+  try {
+    res.json(await nonComplianceImpactReport(ROPA_ITEM, reportFilters(req.query)));
   } catch (e) {
     console.error('Failed to build report:', e.message);
     res.status(500).json({ error: 'Could not load the report' });

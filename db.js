@@ -138,6 +138,25 @@ export async function nonComplianceReport(itemNames, filters) {
   return { totalSchools: rows.length, items: [...counts].map(([item, count]) => ({ item, count })) };
 }
 
+// Schools that flagged one non-compliance item: how many schools, and their teachers / students / untrained teachers.
+// `totalSchools` is every school in the filter, for context.
+export async function nonComplianceImpactReport(itemName, filters) {
+  const { whereSql, params } = reportFilter(filters);
+  const [rows] = await pool.query(
+    `SELECT r.non_compliances, r.total_teachers, r.total_students, r.untrained_teachers FROM td_school_reg r ${whereSql}`, params);
+  const out = { totalSchools: rows.length, schools: 0, teachers: 0, students: 0, untrained: 0 };
+  for (const r of rows) {
+    let list = r.non_compliances;
+    if (typeof list === 'string') { try { list = JSON.parse(list); } catch { list = []; } }
+    if (!Array.isArray(list) || !list.includes(itemName)) continue;
+    out.schools += 1;
+    out.teachers += Number(r.total_teachers) || 0;
+    out.students += Number(r.total_students) || 0;
+    out.untrained += Number(r.untrained_teachers) || 0;
+  }
+  return out;
+}
+
 // District-wise summary: one row per district with every report count, plus a totals row.
 // `sections` = [{ title, key, label?, options }] describes the column groups; `ncItems` the non-compliance options.
 export async function districtSummaryReport(options, ncItems) {

@@ -24,7 +24,7 @@ async function load() {
   paintReport();
   try {
     const qs = new URLSearchParams({ district: state.district });
-    const data = await api(`/api/admin/reports/${slug === 'non-compliance' || slug === 'district-summary' ? slug : 'summary'}?${qs}`);
+    const data = await api(`/api/admin/reports/${slug === 'non-compliance' || slug === 'district-summary' ? slug : slug === 'ropa-2009' ? 'ropa' : 'summary'}?${qs}`);
     if (mine !== epoch) return;
     state.data = data;
     state.totalSchools = data.totalSchools ?? data.total?.values.schools ?? 0;
@@ -103,6 +103,11 @@ const BODY = {
   'needs-lease': (d) => CountTable(d.groups.needsLease, 'Needs to take the property on lease'),
   'lease-20-years': (d) => CountTable(d.groups.lease20Possible, '20-year lease deed possible'),
   'non-compliance': (d) => CountTable(d.items, 'Non-compliance item'),
+  'ropa-2009': (d) => h('div', { class: 'table-wrap' },
+    h('table', { class: 'report-table' },
+      h('thead', {}, h('tr', {}, h('th', {}, '#'), h('th', {}, 'Schools not complying with Pay as per ROPA 2009'), h('th', { class: 'num' }, 'Count'))),
+      h('tbody', {}, [['Number of schools', d.schools], ['Number of teachers', d.teachers], ['Number of students', d.students], ['Number of untrained teachers', d.untrained]]
+        .map(([label, v], i) => h('tr', {}, h('td', { class: 'muted' }, String(i + 1)), h('td', { class: 'strong' }, label), h('td', { class: 'num' }, nf.format(v))))))),
   'district-summary': DistrictTable,
 };
 

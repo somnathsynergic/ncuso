@@ -37,6 +37,7 @@ export const REPORTS = [
   { slug: 'needs-lease', title: 'Need to take property on lease' },
   { slug: 'lease-20-years', title: '20-year lease deed possible' },
   { slug: 'non-compliance', title: 'Non-compliance items' },
+  { slug: 'ropa-2009', title: 'Pay as per ROPA 2009' },
   { slug: 'district-summary', title: 'District-wise summary' },
 ];
 
