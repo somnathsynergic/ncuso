@@ -1,5 +1,6 @@
 import { h } from '/js/components/dom.js';
 import { Topbar, REPORTS } from '/admin/assets/nav.js';
+import { SearchableSelect } from '/admin/assets/combobox.js';
 
 const nf = new Intl.NumberFormat('en-IN');
 const slug = location.pathname.split('/')[3];
@@ -186,9 +187,10 @@ async function downloadPdf(btn) {
 }
 
 function render() {
-  const districtSelect = h('select', { class: 'input select', onChange: (e) => { state.district = e.target.value; load(); } },
-    h('option', { value: '' }, 'All districts'),
-    state.districts.map((d) => h('option', { value: d.id, selected: String(d.id) === state.district }, d.name)));
+  const districtSelect = SearchableSelect({
+    label: 'District', value: state.district, onChange: (v) => { state.district = v; load(); },
+    options: [{ value: '', label: 'All districts' }, ...state.districts.map((d) => ({ value: d.id, label: d.name }))],
+  });
   root.replaceChildren(
     Topbar('reports', 'Admin Dashboard · Reports', slug),
     h('main', { class: 'content' },

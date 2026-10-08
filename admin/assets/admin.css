@@ -245,3 +245,13 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .district-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sort-btn { border: 0; background: none; color: var(--navy); border-radius: 6px; width: 28px; height: 24px; font-size: .8rem; cursor: pointer; }
 .sort-btn:hover { background: #eef0ff; }
+.combo { position: relative; }
+.combo-toggle { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.combo.open .combo-panel { display: block; }
+.combo-search { padding: 8px 12px; margin-bottom: 6px; }
+.combo-list { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+.combo-opt { padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: .92rem; }
+.combo-opt.active, .combo-opt:hover { background: #eef0ff; }
+.combo-opt.selected { color: var(--navy); font-weight: 600; }
+.combo-empty { padding: 10px 12px; color: var(--muted); font-size: .9rem; }

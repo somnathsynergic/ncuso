@@ -1,6 +1,7 @@
 import { h } from '/js/components/dom.js';
 import { steps } from '/js/config/formConfig.js';
 import { Topbar } from '/admin/assets/nav.js';
+import { SearchableSelect } from '/admin/assets/combobox.js';
 
 const COLUMNS = [
   { key: 'id', label: 'ID', width: 80 },
@@ -482,9 +483,10 @@ function render() {
     class: 'input', type: 'search', placeholder: 'Search school, UDISE, mobile or circle…', value: state.search,
     onInput: (e) => { clearTimeout(timer); const v = e.target.value.trim(); timer = setTimeout(() => reset({ search: v }), 300); },
   });
-  const districtSelect = h('select', { class: 'input select', onChange: (e) => reset({ district: e.target.value }) },
-    h('option', { value: '' }, 'All districts'),
-    state.districts.map((d) => h('option', { value: d.id, selected: String(d.id) === state.district }, d.name)));
+  const districtSelect = SearchableSelect({
+    label: 'District', value: state.district, onChange: (v) => reset({ district: v }),
+    options: [{ value: '', label: 'All districts' }, ...state.districts.map((d) => ({ value: d.id, label: d.name }))],
+  });
   const sizeSelect = h('select', { class: 'input select small', 'aria-label': 'Rows per page', onChange: (e) => reset({ pageSize: e.target.value === 'all' ? 'all' : Number(e.target.value) }) },
     [10, 25, 50, 100, 'all'].map((n) => h('option', { value: n, selected: n === state.pageSize }, n === 'all' ? 'All' : `${n} / page`)));
 
