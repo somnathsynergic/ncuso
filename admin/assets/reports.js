@@ -62,16 +62,19 @@ const Stat = (value, note) => h('div', { class: 'stat-box' }, h('strong', {}, nf
 
 // District-wise summary: a row per district, columns grouped by report; first column stays put while scrolling
 function DistrictTable(d) {
-  const num = (v) => h('td', { class: 'num' }, nf.format(v));
+  // first column of each group gets a broader divider that runs down the whole table
+  const cells = (values) => d.groups.flatMap((g) => g.cols.map((c, i) =>
+    h('td', { class: `num${i === 0 ? ' group-start' : ''}` }, nf.format(values[c.key]))));
   return h('div', { class: 'table-wrap district-wrap' },
     h('table', { class: 'report-table district-table' },
       h('thead', {},
         h('tr', {}, h('th', { rowSpan: 2, class: 'sticky-col' }, 'District'),
-          d.groups.map((g) => h('th', { colSpan: g.cols.length, class: 'group-head' }, g.title))),
-        h('tr', {}, d.groups.flatMap((g) => g.cols.map((c) => h('th', { class: 'num sub-head' }, c.label))))),
+          d.groups.map((g) => h('th', { colSpan: g.cols.length, class: 'group-head group-start' }, g.title))),
+        h('tr', {}, d.groups.flatMap((g) => g.cols.map((c, i) => h('th', { class: `num sub-head${i === 0 ? ' group-start' : ''}` }, c.label))))),
       h('tbody', {},
-        d.rows.map((r) => h('tr', {}, h('td', { class: 'strong sticky-col' }, r.district), d.groups.flatMap((g) => g.cols.map((c) => num(r.values[c.key]))))),
-        h('tr', { class: 'total-row' }, h('td', { class: 'strong sticky-col' }, d.total.district), d.groups.flatMap((g) => g.cols.map((c) => num(d.total.values[c.key])))))));
+        d.rows.map((r) => h('tr', {}, h('td', { class: 'strong sticky-col' }, r.district), cells(r.values)))),
+      h('tfoot', {},
+        h('tr', { class: 'total-row' }, h('td', { class: 'strong sticky-col' }, d.total.district), cells(d.total.values)))));
 }
 
 // What each report shows, from the loaded data

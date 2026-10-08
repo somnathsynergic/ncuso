@@ -226,9 +226,12 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .district-table th, .district-table td { white-space: nowrap; }
 .district-table thead th { position: sticky; top: 0; z-index: 2; }
 .district-table thead tr:nth-child(2) th { top: 45px; }
-.district-table .group-head { text-align: center; border-left: 1px solid var(--line); }
+.district-table .group-head { text-align: center; }
 .district-table .sub-head { font-size: .8rem; white-space: normal; min-width: 90px; }
 .district-table .sticky-col { position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid var(--line); }
 .district-table thead .sticky-col { background: #f8f9fe; z-index: 3; }
-.district-table .total-row td { font-weight: 700; background: #f8f9fe; }
-.district-table .total-row .sticky-col { background: #f8f9fe; }
+.district-table th, .district-table td { border-right: 1px solid var(--line); }
+.district-table .group-start { border-left: 3px solid var(--navy); }
+.district-table .group-head { border-bottom: 1px solid var(--line); }
+.district-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: #eef0ff; font-weight: 700; border-top: 2px solid var(--navy); }
+.district-table tfoot .sticky-col { left: 0; z-index: 4; background: #eef0ff; }
