@@ -121,16 +121,20 @@ async function downloadPdf(btn) {
     doc.setFontSize(10).setTextColor(107, 115, 148).text('NCUSO · National Council for Unaided School Organization', margin, margin);
     doc.setFontSize(16).setTextColor(20, 32, 143).text(report.title, margin, margin + 22);
     const generated = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
-    doc.setFontSize(10).setTextColor(60, 60, 60)
-      .text(`${scopeLabel()} — ${nf.format(state.totalSchools)} schools · Generated ${generated}`, margin, margin + 40);
+    doc.setFontSize(13).setFont(undefined, 'bold').setTextColor(28, 35, 64).text(scopeLabel(), margin, margin + 42);
+    const scopeW = doc.getTextWidth(scopeLabel()); // measured at the scope font size
+    doc.setFontSize(10).setFont(undefined, 'normal').setTextColor(60, 60, 60)
+      .text(`${nf.format(state.totalSchools)} schools · Generated ${generated}`, margin + scopeW + 12, margin + 42);
     const table = document.querySelector('#report table');
     if (table) {
       doc.autoTable({
-        html: table, startY: margin + 54, margin: { left: margin, right: margin, bottom: margin }, theme: 'grid',
+        html: table, startY: margin + 58, margin: { left: margin, right: margin, bottom: margin }, theme: 'grid',
         styles: { fontSize: wide ? 6.5 : 10, cellPadding: wide ? 3 : 6, lineColor: [221, 221, 221], lineWidth: 0.5, textColor: [28, 35, 64] },
         headStyles: { fillColor: [20, 32, 143], textColor: 255, halign: 'center', valign: 'middle' },
         footStyles: { fillColor: [238, 240, 255], textColor: [20, 32, 143], fontStyle: 'bold' },
-        didParseCell: (c) => { if (c.section !== 'head' && c.column.index > 0 && /^[\d,.]+%?$/.test(c.cell.text.join(''))) c.cell.styles.halign = 'right'; },
+        didParseCell: (c) => {
+          if (wide && c.section !== 'head' && c.column.index === 0) { c.cell.styles.fontSize = 9; c.cell.styles.fontStyle = 'bold'; } // district names
+          if (c.section !== 'head' && c.column.index > 0 && /^[\d,.]+%?$/.test(c.cell.text.join(''))) c.cell.styles.halign = 'right'; },
       });
     } else { // single-figure reports
       const box = document.querySelector('#report .stat-box');
