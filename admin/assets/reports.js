@@ -62,19 +62,35 @@ const Stat = (value, note) => h('div', { class: 'stat-box' }, h('strong', {}, nf
 
 // District-wise summary: a row per district, columns grouped by report; first column stays put while scrolling
 function DistrictTable(d) {
+  const keys = d.groups.flatMap((g) => g.cols.map((c) => c.key));
   // first column of each group gets a broader divider that runs down the whole table
   const cells = (values) => d.groups.flatMap((g) => g.cols.map((c, i) =>
-    h('td', { class: `num${i === 0 ? ' group-start' : ''}` }, nf.format(values[c.key]))));
+    h('td', { class: `num${i === 0 ? ' group-start' : ''}`, 'data-key': c.key }, nf.format(values[c.key]))));
+  const bodyRows = d.rows.map((r) => h('tr', { 'data-name': r.district.toLowerCase() }, h('td', { class: 'strong sticky-col' }, r.district), cells(r.values)));
+  const totalRow = h('tr', { class: 'total-row' }, h('td', { class: 'strong sticky-col' }, d.total.district), cells(d.total.values));
+
+  // Search by district name: hides the other rows and re-adds the Total row for what is left (the PDF skips hidden rows)
+  const filter = (text) => {
+    const q = text.trim().toLowerCase();
+    const sums = Object.fromEntries(keys.map((k) => [k, 0]));
+    bodyRows.forEach((tr, i) => {
+      const show = !q || tr.dataset.name.includes(q);
+      tr.hidden = !show;
+      if (show) keys.forEach((k) => { sums[k] += d.rows[i].values[k]; });
+    });
+    totalRow.querySelectorAll('td[data-key]').forEach((td) => { td.textContent = nf.format(sums[td.dataset.key]); });
+  };
+
   return h('div', { class: 'table-wrap district-wrap' },
     h('table', { class: 'report-table district-table' },
       h('thead', {},
-        h('tr', {}, h('th', { rowSpan: 2, class: 'sticky-col' }, 'District'),
+        h('tr', {}, h('th', { rowSpan: 2, class: 'sticky-col district-head' },
+          h('div', {}, 'District'),
+          h('input', { class: 'input col-search', type: 'search', placeholder: 'Search district…', 'aria-label': 'Search district', onInput: (e) => filter(e.target.value) })),
           d.groups.map((g) => h('th', { colSpan: g.cols.length, class: 'group-head group-start' }, g.title))),
         h('tr', {}, d.groups.flatMap((g) => g.cols.map((c, i) => h('th', { class: `num sub-head${i === 0 ? ' group-start' : ''}` }, c.label))))),
-      h('tbody', {},
-        d.rows.map((r) => h('tr', {}, h('td', { class: 'strong sticky-col' }, r.district), cells(r.values)))),
-      h('tfoot', {},
-        h('tr', { class: 'total-row' }, h('td', { class: 'strong sticky-col' }, d.total.district), cells(d.total.values)))));
+      h('tbody', {}, bodyRows),
+      h('tfoot', {}, totalRow)));
 }
 
 // What each report shows, from the loaded data

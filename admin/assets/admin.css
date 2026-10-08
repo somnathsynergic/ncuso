@@ -238,3 +238,7 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .report-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
 .report-head .report-title { margin: 0; }
 .pdf-btn { padding: 9px 18px; }
+.district-head { min-width: 220px; }
+.district-head .col-search { margin-top: 6px; padding: 7px 10px; font-weight: 400; }
+.district-table tr[hidden] { display: none; }
+.district-table .sub-head { height: 44px; }
