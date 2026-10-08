@@ -2,6 +2,8 @@ import { h } from '/js/components/dom.js';
 import { Topbar, REPORTS } from '/admin/assets/nav.js';
 import { SearchableSelect } from '/admin/assets/combobox.js';
 
+// reports that already list every district, so they have no district filter
+const DISTRICT_WISE = ['district-summary', 'ropa-2009'];
 const nf = new Intl.NumberFormat('en-IN');
 const slug = location.pathname.split('/')[3];
 const report = REPORTS.find((r) => r.slug === slug);
@@ -118,11 +120,7 @@ const BODY = {
   'needs-lease': (d) => CountTable(d.groups.needsLease, 'Needs to take the property on lease'),
   'lease-20-years': (d) => CountTable(d.groups.lease20Possible, '20-year lease deed possible'),
   'non-compliance': (d) => CountTable(d.items, 'Non-compliance item'),
-  'ropa-2009': (d) => h('div', { class: 'table-wrap' },
-    h('table', { class: 'report-table' },
-      h('thead', {}, h('tr', {}, h('th', {}, '#'), h('th', {}, 'Schools not complying with Pay as per ROPA 2009'), h('th', { class: 'num' }, 'Count'))),
-      h('tbody', {}, [['Number of schools', d.schools], ['Number of teachers', d.teachers], ['Number of students', d.students], ['Number of untrained teachers', d.untrained]]
-        .map(([label, v], i) => h('tr', {}, h('td', { class: 'muted' }, String(i + 1)), h('td', { class: 'strong' }, label), h('td', { class: 'num' }, nf.format(v))))))),
+  'ropa-2009': DistrictTable,
   'district-summary': DistrictTable,
 };
 
@@ -169,7 +167,7 @@ async function downloadPdf(btn) {
         headStyles: { fillColor: [20, 32, 143], textColor: 255, halign: 'center', valign: 'middle' },
         footStyles: { fillColor: [238, 240, 255], textColor: [20, 32, 143], fontStyle: 'bold' },
         didParseCell: (c) => {
-          if (wide && c.section !== 'head' && c.column.index === 0) { c.cell.styles.fontSize = 9; c.cell.styles.fontStyle = 'bold'; } // district names
+          if (DISTRICT_WISE.includes(slug) && c.section !== 'head' && c.column.index === 0) { c.cell.styles.fontSize = wide ? 9 : 11; c.cell.styles.fontStyle = 'bold'; } // district names
           if (c.section !== 'head' && c.column.index > 0 && /^[\d,.]+%?$/.test(c.cell.text.join(''))) c.cell.styles.halign = 'right'; },
       });
     } else { // single-figure reports
@@ -198,7 +196,7 @@ function render() {
         h('div', { class: 'report-head' },
           h('h2', { class: 'report-title' }, report.title),
           h('button', { class: 'btn primary pdf-btn', type: 'button', onClick: (e) => downloadPdf(e.currentTarget) }, 'Download PDF')),
-        slug !== 'district-summary' && h('div', { class: 'toolbar report-toolbar' }, districtSelect),
+        !DISTRICT_WISE.includes(slug) && h('div', { class: 'toolbar report-toolbar' }, districtSelect),
         h('div', { id: 'report' }))));
   paintReport();
 }

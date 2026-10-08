@@ -138,23 +138,26 @@ export async function nonComplianceReport(itemNames, filters) {
   return { totalSchools: rows.length, items: [...counts].map(([item, count]) => ({ item, count })) };
 }
 
-// Schools that flagged one non-compliance item: how many schools, and their teachers / students / untrained teachers.
-// `totalSchools` is every school in the filter, for context.
-export async function nonComplianceImpactReport(itemName, filters) {
-  const { whereSql, params } = reportFilter(filters);
-  const [rows] = await pool.query(
-    `SELECT r.non_compliances, r.total_teachers, r.total_students, r.untrained_teachers FROM td_school_reg r ${whereSql}`, params);
-  const out = { totalSchools: rows.length, schools: 0, teachers: 0, students: 0, untrained: 0 };
-  for (const r of rows) {
+// District-wise figures for schools that flagged one non-compliance item: schools, teachers, students, untrained
+// teachers. Same shape as districtSummaryReport so the page can render both with one table.
+export async function nonComplianceImpactReport(itemName) {
+  const [districts] = await pool.query('SELECT sl_no AS id, district_name AS name FROM md_districts ORDER BY district_name');
+  const [schools] = await pool.query(
+    'SELECT district_id, non_compliances, total_teachers, total_students, untrained_teachers FROM td_school_reg');
+  const cols = [{ key: 'schools', label: 'Schools' }, { key: 'teachers', label: 'Teachers' }, { key: 'students', label: 'Students' }, { key: 'untrained', label: 'Untrained teachers' }];
+  const blank = () => ({ schools: 0, teachers: 0, students: 0, untrained: 0 });
+  const byId = new Map(districts.map((d) => [d.id, { district: d.name, values: blank() }]));
+  const total = { district: 'Total', values: blank() };
+  for (const r of schools) {
     let list = r.non_compliances;
     if (typeof list === 'string') { try { list = JSON.parse(list); } catch { list = []; } }
     if (!Array.isArray(list) || !list.includes(itemName)) continue;
-    out.schools += 1;
-    out.teachers += Number(r.total_teachers) || 0;
-    out.students += Number(r.total_students) || 0;
-    out.untrained += Number(r.untrained_teachers) || 0;
+    let row = byId.get(r.district_id);
+    if (!row) { row = { district: 'Not specified', values: blank() }; byId.set(r.district_id ?? null, row); }
+    const add = { schools: 1, teachers: Number(r.total_teachers) || 0, students: Number(r.total_students) || 0, untrained: Number(r.untrained_teachers) || 0 };
+    for (const k of Object.keys(add)) { row.values[k] += add[k]; total.values[k] += add[k]; }
   }
-  return out;
+  return { groups: [{ title: itemName, cols }], rows: [...byId.values()], total };
 }
 
 // District-wise summary: one row per district with every report count, plus a totals row.

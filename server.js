@@ -140,9 +140,9 @@ app.get('/api/admin/reports/district-summary', requireAdmin, async (_req, res) =
 });
 
 const ROPA_ITEM = 'PAY AS PER ROPA 2009';
-app.get('/api/admin/reports/ropa', requireAdmin, async (req, res) => {
+app.get('/api/admin/reports/ropa', requireAdmin, async (_req, res) => {
   try {
-    res.json(await nonComplianceImpactReport(ROPA_ITEM, reportFilters(req.query)));
+    res.json(await nonComplianceImpactReport(ROPA_ITEM));
   } catch (e) {
     console.error('Failed to build report:', e.message);
     res.status(500).json({ error: 'Could not load the report' });
