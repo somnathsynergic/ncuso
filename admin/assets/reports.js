@@ -163,10 +163,11 @@ async function downloadPdf(btn) {
     if (table) {
       doc.autoTable({
         html: table, startY: margin + 58, margin: { left: margin, right: margin, bottom: margin }, theme: 'grid',
-        styles: { fontSize: wide ? 8.5 : 10, cellPadding: wide ? 3 : 6, lineColor: [221, 221, 221], lineWidth: 0.5, textColor: [28, 35, 64] },
+        styles: { fontSize: wide ? 8.5 : 10, cellPadding: wide ? 3 : 6, lineColor: [130, 136, 156], lineWidth: 0.8, textColor: [28, 35, 64] },
         headStyles: { fillColor: [20, 32, 143], textColor: 255, halign: 'center', valign: 'middle', fontSize: wide ? 7.5 : 10 },
         footStyles: { fillColor: [238, 240, 255], textColor: [20, 32, 143], fontStyle: 'bold' },
         didParseCell: (c) => {
+          if (c.cell.raw?.classList?.contains('group-start')) c.cell.styles.lineWidth = { top: 0.8, right: 0.8, bottom: 0.8, left: 1.8 }; // broader divider before each main group
           if (c.section === 'head' && c.column.index === 0) c.cell.text = ['District']; // drop the sort-arrow glyph, which the PDF font prints as a stray character
           if (DISTRICT_WISE.includes(slug) && c.section !== 'head' && c.column.index === 0) { c.cell.styles.fontSize = wide ? 10 : 11; c.cell.styles.fontStyle = 'bold'; } // district names
           if (c.section !== 'head' && c.column.index > 0 && /^[\d,.]+%?$/.test(c.cell.text.join(''))) c.cell.styles.halign = 'right'; },
