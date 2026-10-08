@@ -243,5 +243,5 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .district-table tr[hidden] { display: none; }
 .district-table .sub-head { height: 44px; }
 .district-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.sort-btn { border: 1px solid var(--line); background: #fff; color: var(--navy); border-radius: 6px; width: 28px; height: 24px; font-size: .75rem; cursor: pointer; }
+.sort-btn { border: 0; background: none; color: var(--navy); border-radius: 6px; width: 28px; height: 24px; font-size: .8rem; cursor: pointer; }
 .sort-btn:hover { background: #eef0ff; }
