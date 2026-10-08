@@ -101,6 +101,7 @@ app.get('/api/admin/registrations', requireAdmin, async (req, res) => {
     const { total, rows, maxId, totals } = await listRegistrations({
       search: String(q.search || '').trim().slice(0, 100),
       districtId: Number.parseInt(q.district, 10) || null,
+      status: ['P', 'A', 'R'].includes(q.status) ? q.status : '',
       sort: String(q.sort || 'submitted'),
       dir: q.dir === 'asc' ? 'asc' : 'desc',
       page: int(q.page, 1, 1, 1e6),

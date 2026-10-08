@@ -53,7 +53,7 @@ const SORT_COLUMNS = {
   submitted: 'r.created_at',
 };
 
-export async function listRegistrations({ search = '', districtId = null, sort = 'submitted', dir = 'desc', page = 1, pageSize = 10 }) {
+export async function listRegistrations({ search = '', districtId = null, status = '', sort = 'submitted', dir = 'desc', page = 1, pageSize = 10 }) {
   const where = [];
   const params = [];
   if (search) {
@@ -64,6 +64,10 @@ export async function listRegistrations({ search = '', districtId = null, sort =
   if (districtId) {
     where.push('r.district_id = ?');
     params.push(districtId);
+  }
+  if (['P', 'A', 'R'].includes(status)) {
+    where.push('r.approve_flag = ?');
+    params.push(status);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const orderCol = SORT_COLUMNS[sort] || SORT_COLUMNS.submitted;

@@ -25,7 +25,7 @@ const CHUNK = 100;    // rows per request in "All" mode
 //  - paged: the server returns one page (10/25/50/100 rows); the rows are virtualized in the scroller.
 //  - all:   the server returns CHUNK rows at a time; chunks are fetched on demand as the user scrolls.
 const state = {
-  search: '', district: '', sort: 'submitted', dir: 'desc', page: 1, pageSize: 10,
+  search: '', district: '', status: '', sort: 'submitted', dir: 'desc', page: 1, pageSize: 10,
   rows: [],            // paged mode: current page
   cache: new Map(),    // all mode: row index -> row
   inflight: new Set(), // all mode: chunk numbers being fetched
@@ -91,7 +91,7 @@ const rowCount = () => (isAll() ? state.total : state.rows.length);
 const getRow = (i) => (isAll() ? state.cache.get(i) : state.rows[i]);
 
 const query = (page, pageSize) => new URLSearchParams({
-  search: state.search, district: state.district, sort: state.sort, dir: state.dir, page, pageSize,
+  search: state.search, district: state.district, status: state.status, sort: state.sort, dir: state.dir, page, pageSize,
 });
 
 let epoch = 0; // bumped on every query change; stale responses are dropped
@@ -446,7 +446,8 @@ const nf = new Intl.NumberFormat('en-IN');
 // Scope = the chosen district's name, or "all districts"; an active search is mentioned too
 function scopeLabel() {
   const districtName = state.districts.find((d) => String(d.id) === state.district)?.name;
-  return `Totals for ${districtName || 'all districts'}${state.search ? ` · matching “${state.search}”` : ''}`;
+  const statusName = state.status ? ` · ${STATUS[state.status][0]}` : '';
+  return `Totals for ${districtName || 'all districts'}${statusName}${state.search ? ` · matching “${state.search}”` : ''}`;
 }
 
 function paintTotals() {
@@ -501,6 +502,11 @@ function render() {
     h('main', { class: 'content' },
       h('div', { class: 'card' },
         h('div', { class: 'toolbar' }, searchInput, districtSelect, sizeSelect),
+        h('div', { class: 'status-filter', role: 'radiogroup', 'aria-label': 'Filter by status' },
+          [['', 'All'], ['P', 'Pending'], ['A', 'Approved'], ['R', 'Rejected']].map(([v, label]) =>
+            h('label', { class: 'radio-pill' },
+              h('input', { type: 'radio', name: 'status', value: v, checked: state.status === v, onChange: () => reset({ status: v }) }),
+              h('span', {}, label)))),
         h('div', { id: 'table-holder' }, h('div', { id: 'table-wrap', class: 'table-wrap' }, scroller, h('div', { id: 'totals', class: 'totals-bar', 'aria-live': 'polite' }))))));
   paintTable();
 }
