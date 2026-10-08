@@ -81,15 +81,29 @@ function DistrictTable(d) {
     totalRow.querySelectorAll('td[data-key]').forEach((td) => { td.textContent = nf.format(sums[td.dataset.key]); });
   };
 
+  // Sort by district name: click toggles A→Z / Z→A (the PDF follows the on-screen order)
+  let dir = 'asc';
+  const tbody = h('tbody', {}, bodyRows);
+  const sortBtn = h('button', {
+    class: 'sort-btn', type: 'button', title: 'Sort districts', 'aria-label': 'Sort districts, currently A to Z',
+    onClick: () => {
+      dir = dir === 'asc' ? 'desc' : 'asc';
+      const sorted = [...bodyRows].sort((a, b) => a.dataset.name.localeCompare(b.dataset.name) * (dir === 'asc' ? 1 : -1));
+      tbody.replaceChildren(...sorted);
+      sortBtn.textContent = dir === 'asc' ? '▲' : '▼';
+      sortBtn.setAttribute('aria-label', `Sort districts, currently ${dir === 'asc' ? 'A to Z' : 'Z to A'}`);
+    },
+  }, '▲');
+
   return h('div', { class: 'table-wrap district-wrap' },
     h('table', { class: 'report-table district-table' },
       h('thead', {},
         h('tr', {}, h('th', { rowSpan: 2, class: 'sticky-col district-head' },
-          h('div', {}, 'District'),
+          h('div', { class: 'district-label' }, 'District', sortBtn),
           h('input', { class: 'input col-search', type: 'search', placeholder: 'Search district…', 'aria-label': 'Search district', onInput: (e) => filter(e.target.value) })),
           d.groups.map((g) => h('th', { colSpan: g.cols.length, class: 'group-head group-start' }, g.title))),
         h('tr', {}, d.groups.flatMap((g) => g.cols.map((c, i) => h('th', { class: `num sub-head${i === 0 ? ' group-start' : ''}` }, c.label))))),
-      h('tbody', {}, bodyRows),
+      tbody,
       h('tfoot', {}, totalRow)));
 }
 
