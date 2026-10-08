@@ -100,6 +100,52 @@ function paintReport() {
     h('div', { class: state.loading ? 'loading-fade' : '' }, BODY[slug](state.data)));
 }
 
+// ---------- PDF download (jsPDF + autoTable, loaded from the CDN on first use) ----------
+const loadScript = (src) => new Promise((resolve, reject) => {
+  if (document.querySelector(`script[src="${src}"]`)) return resolve();
+  const el = Object.assign(document.createElement('script'), { src, onload: resolve, onerror: () => reject(new Error('Could not load the PDF library')) });
+  document.head.append(el);
+});
+
+async function downloadPdf(btn) {
+  if (!state.data || state.loading) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    const wide = slug === 'district-summary';
+    const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: wide ? 'a3' : 'a4' });
+    const margin = 36;
+    doc.setFontSize(10).setTextColor(107, 115, 148).text('NCUSO · National Council for Unaided School Organization', margin, margin);
+    doc.setFontSize(16).setTextColor(20, 32, 143).text(report.title, margin, margin + 22);
+    const generated = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    doc.setFontSize(10).setTextColor(60, 60, 60)
+      .text(`${scopeLabel()} — ${nf.format(state.totalSchools)} schools · Generated ${generated}`, margin, margin + 40);
+    const table = document.querySelector('#report table');
+    if (table) {
+      doc.autoTable({
+        html: table, startY: margin + 54, margin: { left: margin, right: margin, bottom: margin }, theme: 'grid',
+        styles: { fontSize: wide ? 6.5 : 10, cellPadding: wide ? 3 : 6, lineColor: [221, 221, 221], lineWidth: 0.5, textColor: [28, 35, 64] },
+        headStyles: { fillColor: [20, 32, 143], textColor: 255, halign: 'center', valign: 'middle' },
+        footStyles: { fillColor: [238, 240, 255], textColor: [20, 32, 143], fontStyle: 'bold' },
+        didParseCell: (c) => { if (c.section !== 'head' && c.column.index > 0 && /^[\d,.]+%?$/.test(c.cell.text.join(''))) c.cell.styles.halign = 'right'; },
+      });
+    } else { // single-figure reports
+      const box = document.querySelector('#report .stat-box');
+      doc.setFontSize(28).setTextColor(20, 32, 143).text(box.querySelector('strong').textContent, margin, margin + 100);
+      doc.setFontSize(12).setTextColor(60, 60, 60).text(box.querySelector('span')?.textContent || '', margin, margin + 125);
+    }
+    doc.save(`${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
 function render() {
   const districtSelect = h('select', { class: 'input select', onChange: (e) => { state.district = e.target.value; load(); } },
     h('option', { value: '' }, 'All districts'),
@@ -108,7 +154,9 @@ function render() {
     Topbar('reports', 'Admin Dashboard · Reports', slug),
     h('main', { class: 'content' },
       h('div', { class: 'card' },
-        h('h2', { class: 'report-title' }, report.title),
+        h('div', { class: 'report-head' },
+          h('h2', { class: 'report-title' }, report.title),
+          h('button', { class: 'btn primary pdf-btn', type: 'button', onClick: (e) => downloadPdf(e.currentTarget) }, 'Download PDF')),
         slug !== 'district-summary' && h('div', { class: 'toolbar report-toolbar' }, districtSelect),
         h('div', { id: 'report' }))));
   paintReport();

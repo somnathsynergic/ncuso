@@ -235,3 +235,6 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .district-table .group-head { border-bottom: 1px solid #dddddd; }
 .district-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: #eef0ff; font-weight: 700; border-top: 2px solid var(--navy); }
 .district-table tfoot .sticky-col { left: 0; z-index: 4; background: #eef0ff; }
+.report-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.report-head .report-title { margin: 0; }
+.pdf-btn { padding: 9px 18px; }
