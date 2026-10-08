@@ -37,6 +37,7 @@ export const REPORTS = [
   { slug: 'needs-lease', title: 'Need to take property on lease' },
   { slug: 'lease-20-years', title: '20-year lease deed possible' },
   { slug: 'non-compliance', title: 'Non-compliance items' },
+  { slug: 'district-summary', title: 'District-wise summary' },
 ];
 
 // Shared header with the menu; `active` is 'dashboard' or 'reports' (activeReport = slug of the open report)

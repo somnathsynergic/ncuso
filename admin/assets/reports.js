@@ -24,10 +24,10 @@ async function load() {
   paintReport();
   try {
     const qs = new URLSearchParams({ district: state.district });
-    const data = await api(`/api/admin/reports/${slug === 'non-compliance' ? 'non-compliance' : 'summary'}?${qs}`);
+    const data = await api(`/api/admin/reports/${slug === 'non-compliance' || slug === 'district-summary' ? slug : 'summary'}?${qs}`);
     if (mine !== epoch) return;
     state.data = data;
-    state.totalSchools = data.totalSchools;
+    state.totalSchools = data.totalSchools ?? data.total?.values.schools ?? 0;
   } catch (e) {
     if (mine !== epoch) return;
     state.error = e.message;
@@ -60,6 +60,20 @@ function CountTable(items, label) {
 // Single-figure report
 const Stat = (value, note) => h('div', { class: 'stat-box' }, h('strong', {}, nf.format(value)), note && h('span', { class: 'muted' }, note));
 
+// District-wise summary: a row per district, columns grouped by report; first column stays put while scrolling
+function DistrictTable(d) {
+  const num = (v) => h('td', { class: 'num' }, nf.format(v));
+  return h('div', { class: 'table-wrap district-wrap' },
+    h('table', { class: 'report-table district-table' },
+      h('thead', {},
+        h('tr', {}, h('th', { rowSpan: 2, class: 'sticky-col' }, 'District'),
+          d.groups.map((g) => h('th', { colSpan: g.cols.length, class: 'group-head' }, g.title))),
+        h('tr', {}, d.groups.flatMap((g) => g.cols.map((c) => h('th', { class: 'num sub-head' }, c.label))))),
+      h('tbody', {},
+        d.rows.map((r) => h('tr', {}, h('td', { class: 'strong sticky-col' }, r.district), d.groups.flatMap((g) => g.cols.map((c) => num(r.values[c.key]))))),
+        h('tr', { class: 'total-row' }, h('td', { class: 'strong sticky-col' }, d.total.district), d.groups.flatMap((g) => g.cols.map((c) => num(d.total.values[c.key])))))));
+}
+
 // What each report shows, from the loaded data
 const BODY = {
   'previously-applied-noc': (d) => CountTable(d.groups.previouslyAppliedNoc, 'Previously applied for NOC'),
@@ -70,6 +84,7 @@ const BODY = {
   'needs-lease': (d) => CountTable(d.groups.needsLease, 'Needs to take the property on lease'),
   'lease-20-years': (d) => CountTable(d.groups.lease20Possible, '20-year lease deed possible'),
   'non-compliance': (d) => CountTable(d.items, 'Non-compliance item'),
+  'district-summary': DistrictTable,
 };
 
 function paintReport() {
@@ -91,7 +106,7 @@ function render() {
     h('main', { class: 'content' },
       h('div', { class: 'card' },
         h('h2', { class: 'report-title' }, report.title),
-        h('div', { class: 'toolbar report-toolbar' }, districtSelect),
+        slug !== 'district-summary' && h('div', { class: 'toolbar report-toolbar' }, districtSelect),
         h('div', { id: 'report' }))));
   paintReport();
 }

@@ -138,6 +138,49 @@ export async function nonComplianceReport(itemNames, filters) {
   return { totalSchools: rows.length, items: [...counts].map(([item, count]) => ({ item, count })) };
 }
 
+// District-wise summary: one row per district with every report count, plus a totals row.
+// `sections` = [{ title, key, label?, options }] describes the column groups; `ncItems` the non-compliance options.
+export async function districtSummaryReport(options, ncItems) {
+  const [districts] = await pool.query('SELECT sl_no AS id, district_name AS name FROM md_districts ORDER BY district_name');
+  const [schools] = await pool.query(
+    `SELECT district_id, total_teachers, untrained_teachers, previously_applied_noc, school_type, sanctioned_building_plan,
+            needs_lease, lease_20_years_possible, non_compliances FROM td_school_reg`);
+
+  const groups = [
+    { title: 'Schools & teachers', cols: [{ key: 'schools', label: 'Schools' }, { key: 'teachers', label: 'Teachers' }, { key: 'untrained', label: 'Untrained teachers' }] },
+    { title: 'Previously applied for NOC', cols: options.previouslyAppliedNoc.map((o) => ({ key: `noc:${o}`, label: o })) },
+    { title: 'Type of school', cols: options.schoolType.map((o) => ({ key: `type:${o}`, label: o })) },
+    { title: 'Sanctioned building plan', cols: options.sanctionedPlan.map((o) => ({ key: `plan:${o}`, label: o })) },
+    { title: 'Needs property on lease', cols: options.needsLease.map((o) => ({ key: `lease:${o}`, label: o })) },
+    { title: '20-year lease deed possible', cols: options.lease20Possible.map((o) => ({ key: `lease20:${o}`, label: o })) },
+    { title: 'Non-compliance items', cols: ncItems.map((o) => ({ key: `nc:${o}`, label: o })) },
+  ];
+  const keys = groups.flatMap((g) => g.cols.map((c) => c.key));
+  const blank = () => Object.fromEntries(keys.map((k) => [k, 0]));
+
+  const byId = new Map(districts.map((d) => [d.id, { district: d.name, values: blank() }]));
+  const total = { district: 'Total', values: blank() };
+  for (const r of schools) {
+    let row = byId.get(r.district_id);
+    if (!row) { row = { district: 'Not specified', values: blank() }; byId.set(r.district_id ?? null, row); }
+    let nc = r.non_compliances;
+    if (typeof nc === 'string') { try { nc = JSON.parse(nc); } catch { nc = []; } }
+    const hits = [
+      'schools', 'teachers', 'untrained',
+      `noc:${r.previously_applied_noc}`, `type:${r.school_type}`, `plan:${r.sanctioned_building_plan}`,
+      `lease:${r.needs_lease}`, `lease20:${r.lease_20_years_possible}`,
+      ...(Array.isArray(nc) ? [...new Set(nc)].map((n) => `nc:${n}`) : []),
+    ];
+    for (const k of hits) {
+      if (!(k in row.values)) continue;
+      const add = k === 'teachers' ? Number(r.total_teachers) || 0 : k === 'untrained' ? Number(r.untrained_teachers) || 0 : 1;
+      row.values[k] += add;
+      total.values[k] += add;
+    }
+  }
+  return { groups, rows: [...byId.values()], total };
+}
+
 // Returns one registration keyed by the same field names the form uses,
 // so the admin popup can reuse the form config for labels.
 export async function getRegistration(id) {
