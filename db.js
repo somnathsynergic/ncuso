@@ -169,11 +169,12 @@ export async function nonComplianceImpactReport(itemName) {
 export async function districtSummaryReport(options, ncItems) {
   const [districts] = await pool.query('SELECT sl_no AS id, district_name AS name FROM md_districts ORDER BY district_name');
   const [schools] = await pool.query(
-    `SELECT district_id, total_teachers, untrained_teachers, previously_applied_noc, school_type, sanctioned_building_plan,
+    `SELECT district_id, total_teachers, untrained_teachers, total_students, total_boys, total_girls, previously_applied_noc, school_type, sanctioned_building_plan,
             needs_lease, lease_20_years_possible, non_compliances FROM td_school_reg`);
 
   const groups = [
     { title: 'Schools & teachers', cols: [{ key: 'schools', label: 'Schools' }, { key: 'teachers', label: 'Teachers' }, { key: 'untrained', label: 'Untrained teachers' }] },
+    { title: 'Students', cols: [{ key: 'students', label: 'Students' }, { key: 'boys', label: 'Boys' }, { key: 'girls', label: 'Girls' }] },
     { title: 'Previously applied for NOC', cols: options.previouslyAppliedNoc.map((o) => ({ key: `noc:${o}`, label: o })) },
     { title: 'Type of school', cols: options.schoolType.map((o) => ({ key: `type:${o}`, label: o })) },
     { title: 'Sanctioned building plan', cols: options.sanctionedPlan.map((o) => ({ key: `plan:${o}`, label: o })) },
@@ -192,14 +193,15 @@ export async function districtSummaryReport(options, ncItems) {
     let nc = r.non_compliances;
     if (typeof nc === 'string') { try { nc = JSON.parse(nc); } catch { nc = []; } }
     const hits = [
-      'schools', 'teachers', 'untrained',
+      'schools', 'teachers', 'untrained', 'students', 'boys', 'girls',
       `noc:${r.previously_applied_noc}`, `type:${r.school_type}`, `plan:${r.sanctioned_building_plan}`,
       `lease:${r.needs_lease}`, `lease20:${r.lease_20_years_possible}`,
       ...(Array.isArray(nc) ? [...new Set(nc)].map((n) => `nc:${n}`) : []),
     ];
     for (const k of hits) {
       if (!(k in row.values)) continue;
-      const add = k === 'teachers' ? Number(r.total_teachers) || 0 : k === 'untrained' ? Number(r.untrained_teachers) || 0 : 1;
+      const add = k === 'teachers' ? Number(r.total_teachers) || 0 : k === 'untrained' ? Number(r.untrained_teachers) || 0
+        : k === 'students' ? Number(r.total_students) || 0 : k === 'boys' ? Number(r.total_boys) || 0 : k === 'girls' ? Number(r.total_girls) || 0 : 1;
       row.values[k] += add;
       total.values[k] += add;
     }
