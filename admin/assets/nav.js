@@ -39,6 +39,7 @@ export const REPORTS = [
   { slug: 'non-compliance', title: 'Non-compliance items' },
   { slug: 'ropa-2009', title: 'Pay as per ROPA 2009' },
   { slug: 'district-summary', title: 'District-wise summary' },
+  { slug: 'district-non-compliance', title: 'District-wise non-compliance report' },
 ];
 
 // Shared header with the menu; `active` is 'dashboard' or 'reports' (activeReport = slug of the open report)

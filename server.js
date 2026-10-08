@@ -150,6 +150,20 @@ app.get('/api/admin/reports/ropa', requireAdmin, async (_req, res) => {
   }
 });
 
+// Same data as the district-wise summary, trimmed to teachers, students and non-compliance columns
+app.get('/api/admin/reports/district-non-compliance', requireAdmin, async (_req, res) => {
+  try {
+    const full = await districtSummaryReport(REPORT_OPTIONS, NON_COMPLIANCE_ITEMS);
+    const groups = full.groups
+      .filter((g) => ['Schools & teachers', 'Students', 'Non-compliance items'].includes(g.title))
+      .map((g) => (g.title === 'Schools & teachers' ? { title: 'Teachers', cols: g.cols.filter((c) => c.key !== 'schools') } : g));
+    res.json({ ...full, groups });
+  } catch (e) {
+    console.error('Failed to build report:', e.message);
+    res.status(500).json({ error: 'Could not load the report' });
+  }
+});
+
 app.get('/api/admin/reports/non-compliance', requireAdmin, async (req, res) => {
   try {
     res.json(await nonComplianceReport(NON_COMPLIANCE_ITEMS, reportFilters(req.query)));

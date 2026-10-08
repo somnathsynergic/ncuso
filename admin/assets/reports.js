@@ -3,7 +3,7 @@ import { Topbar, REPORTS } from '/admin/assets/nav.js';
 import { SearchableSelect } from '/admin/assets/combobox.js';
 
 // reports that already list every district, so they have no district filter
-const DISTRICT_WISE = ['district-summary', 'ropa-2009'];
+const DISTRICT_WISE = ['district-summary', 'district-non-compliance', 'ropa-2009'];
 const nf = new Intl.NumberFormat('en-IN');
 const slug = location.pathname.split('/')[3];
 const report = REPORTS.find((r) => r.slug === slug);
@@ -27,7 +27,7 @@ async function load() {
   paintReport();
   try {
     const qs = new URLSearchParams({ district: state.district });
-    const data = await api(`/api/admin/reports/${slug === 'non-compliance' || slug === 'district-summary' ? slug : slug === 'ropa-2009' ? 'ropa' : 'summary'}?${qs}`);
+    const data = await api(`/api/admin/reports/${slug === 'non-compliance' || slug === 'district-summary' || slug === 'district-non-compliance' ? slug : slug === 'ropa-2009' ? 'ropa' : 'summary'}?${qs}`);
     if (mine !== epoch) return;
     state.data = data;
     state.totalSchools = data.totalSchools ?? data.total?.values.schools ?? 0;
@@ -122,6 +122,7 @@ const BODY = {
   'non-compliance': (d) => CountTable(d.items, 'Non-compliance item'),
   'ropa-2009': DistrictTable,
   'district-summary': DistrictTable,
+  'district-non-compliance': DistrictTable,
 };
 
 function paintReport() {
