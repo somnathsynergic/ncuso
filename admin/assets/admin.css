@@ -231,7 +231,7 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .district-table .sticky-col { position: sticky; left: 0; background: #fff; z-index: 1; border-right: 1px solid var(--line); }
 .district-table thead .sticky-col { background: #f8f9fe; z-index: 3; }
 .district-table th, .district-table td { border-right: 1px solid var(--line); }
-.district-table .group-start { border-left: 2px solid #9aa0b4; }
+.district-table .group-start { border-left: 2px solid #7a8096; }
 .district-table .group-head { border-bottom: 1px solid var(--line); }
 .district-table tfoot td { position: sticky; bottom: 0; z-index: 2; background: #eef0ff; font-weight: 700; border-top: 2px solid var(--navy); }
 .district-table tfoot .sticky-col { left: 0; z-index: 4; background: #eef0ff; }
