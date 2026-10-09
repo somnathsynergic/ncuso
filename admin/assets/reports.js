@@ -69,7 +69,12 @@ function DistrictTable(d) {
   // first column of each group gets a broader divider that runs down the whole table
   const cells = (values) => d.groups.flatMap((g) => g.cols.map((c, i) =>
     h('td', { class: `num${i === 0 ? ' group-start' : ''}`, 'data-key': c.key }, nf.format(values[c.key]))));
-  const bodyRows = d.rows.map((r) => h('tr', { 'data-name': r.district.toLowerCase() }, h('td', { class: 'strong sticky-col' }, r.district), cells(r.values)));
+  const bodyRows = d.rows.map((r) => h('tr', { 'data-name': r.district.toLowerCase() }, h('td', { class: 'strong sticky-col' }, h('span', { class: 'serial' }), r.district), cells(r.values)));
+  // serial numbers follow what is on screen: renumbered after every search or sort
+  const renumber = () => {
+    let n = 0;
+    [...tbody.children].forEach((tr) => { if (!tr.hidden) tr.querySelector('.serial').textContent = `${++n}.`; });
+  };
   const totalRow = h('tr', { class: 'total-row' }, h('td', { class: 'strong sticky-col' }, d.total.district), cells(d.total.values));
 
   // Search by district name: hides the other rows and re-adds the Total row for what is left (the PDF skips hidden rows)
@@ -81,18 +86,21 @@ function DistrictTable(d) {
       tr.hidden = !show;
       if (show) keys.forEach((k) => { sums[k] += d.rows[i].values[k]; });
     });
+    renumber();
     totalRow.querySelectorAll('td[data-key]').forEach((td) => { td.textContent = nf.format(sums[td.dataset.key]); });
   };
 
   // Sort by district name: click toggles A→Z / Z→A (the PDF follows the on-screen order)
   let dir = 'asc';
   const tbody = h('tbody', {}, bodyRows);
+  renumber();
   const sortBtn = h('button', {
     class: 'sort-btn', type: 'button', title: 'Sort districts', 'aria-label': 'Sort districts, currently A to Z',
     onClick: () => {
       dir = dir === 'asc' ? 'desc' : 'asc';
       const sorted = [...bodyRows].sort((a, b) => a.dataset.name.localeCompare(b.dataset.name) * (dir === 'asc' ? 1 : -1));
       tbody.replaceChildren(...sorted);
+      renumber();
       sortBtn.textContent = dir === 'asc' ? '▲' : '▼';
       sortBtn.setAttribute('aria-label', `Sort districts, currently ${dir === 'asc' ? 'A to Z' : 'Z to A'}`);
     },

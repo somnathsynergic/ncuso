@@ -262,3 +262,4 @@ td.empty { text-align: center; padding: 40px 14px; color: var(--muted); }
 .radio-pill:hover span { border-color: var(--navy); }
 .radio-pill input:checked + span { background: var(--navy); border-color: var(--navy); color: #fff; }
 .radio-pill input:focus-visible + span { box-shadow: 0 0 0 4px rgba(20, 32, 143, .2); }
+.district-table .serial { display: inline-block; min-width: 2.2em; color: var(--muted); font-weight: 500; }
